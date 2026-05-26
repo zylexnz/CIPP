@@ -351,6 +351,15 @@ const CippAddEditUser = (props) => {
           }
         }
       }
+
+      // Populate custom user attributes from template
+      if (template.defaultAttributes) {
+        Object.entries(template.defaultAttributes).forEach(([key, attr]) => {
+          if (attr?.Value) {
+            setFieldIfEmpty(`defaultAttributes.${key}.Value`, attr.Value)
+          }
+        })
+      }
     }
   }, [watchedFields.userTemplate, formType])
 
@@ -846,7 +855,7 @@ const CippAddEditUser = (props) => {
               label: userGroups.DisplayName,
               value: userGroups.id,
               addedFields: {
-                groupType: userGroups.groupType,
+                groupType: userGroups.calculatedGroupType || userGroups.groupType,
               },
             }))}
             creatable={false}

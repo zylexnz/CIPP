@@ -11,6 +11,7 @@ import {
   BarChart,
 } from '@mui/icons-material'
 import { Chip, Link, SvgIcon, Tooltip } from '@mui/material'
+import NextLink from 'next/link'
 import { alpha } from '@mui/material/styles'
 import { Box } from '@mui/system'
 import { CippCopyToClipBoard } from '../components/CippComponents/CippCopyToClipboard'
@@ -259,7 +260,11 @@ export const getCippFormatting = (data, cellName, type, canReceive, flatten = tr
     return isText ? data : data
   }
 
-  if (cellName === 'alignmentScore' || cellName === 'combinedAlignmentScore') {
+  if (
+    cellName === 'alignmentScore' ||
+    cellName === 'combinedAlignmentScore' ||
+    cellName === 'compliancePercentage'
+  ) {
     // Handle alignment score, return a percentage with a label
     return isText ? (
       `${data}%`
@@ -269,7 +274,8 @@ export const getCippFormatting = (data, cellName, type, canReceive, flatten = tr
   }
 
   if (cellName === 'currentDeviationsCount') {
-    if (data === undefined || data === null) return isText ? 'N/A' : <Chip variant="outlined" label="N/A" size="small" color="default" />
+    if (data === undefined || data === null)
+      return isText ? 'N/A' : <Chip variant="outlined" label="N/A" size="small" color="default" />
     const count = Number(data)
     const color = count > 0 ? 'warning' : 'success'
     const label = count > 0 ? `${count} Deviation${count !== 1 ? 's' : ''}` : 'None'
@@ -990,17 +996,12 @@ export const getCippFormatting = (data, cellName, type, canReceive, flatten = tr
   }
 
   // ISO 8601 Duration Formatting
-  // Add property names here to automatically format ISO 8601 duration strings (e.g., "PT1H23M30S")
-  // into human-readable format (e.g., "1 hour 23 minutes 30 seconds") across all CIPP tables.
-  // This works for any API response property that contains ISO 8601 duration format.
-  const durationArray = [
-    'autoExtendDuration', // GDAP page (/tenant/gdap-management/relationships)
-    'deploymentDuration', // AutoPilot deployments (/endpoint/reports/autopilot-deployment)
-    'deploymentTotalDuration', // AutoPilot deployments (/endpoint/reports/autopilot-deployment)
-    'deviceSetupDuration', // AutoPilot deployments (/endpoint/reports/autopilot-deployment)
-    'accountSetupDuration', // AutoPilot deployments (/endpoint/reports/autopilot-deployment)
-  ]
-  if (durationArray.includes(cellName)) {
+  // Any property whose name ends in "Duration" is auto-formatted from ISO 8601 (e.g. "PT1H23M30S")
+  // into human-readable form (e.g. "1 hour 23 minutes 30 seconds") across all CIPP tables.
+  // The try/catch below handles same-suffixed fields that are not actually ISO 8601.
+  // Add explicit entries below for fields that don't follow the *Duration naming convention.
+  const durationArray = []
+  if (durationArray.includes(cellName) || cellName.endsWith('Duration')) {
     isoDuration.setLocales(
       {
         en,
@@ -1009,8 +1010,26 @@ export const getCippFormatting = (data, cellName, type, canReceive, flatten = tr
         fallbackLocale: 'en',
       }
     )
-    const duration = isoDuration(data)
-    return duration.humanize('en')
+    try {
+      const duration = isoDuration(data)
+      const formattedDuration = duration.humanize('en')
+      if (formattedDuration) {
+        return formattedDuration
+      }
+    } catch {
+      // Fall through to the default formatter when a Duration-suffixed field is not ISO 8601.
+    }
+  }
+
+  // Internal CIPP navigation links
+  if ((cellName === 'cippLink') && typeof data === 'string') {
+    return isText ? (
+      data
+    ) : (
+      <Link component={NextLink} href={data} underline="hover">
+        View
+      </Link>
+    )
   }
 
   //if string starts with http, return a link
