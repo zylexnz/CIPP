@@ -39,7 +39,7 @@ import { useSettings } from '../../../hooks/use-settings'
 import { CippApiDialog } from '../../../components/CippComponents/CippApiDialog'
 import { useDialog } from '../../../hooks/use-dialog'
 import tabOptions from './tabOptions.json'
-import standardsData from '../../../data/standards.json'
+import { getStandards } from '../../../utils/standards-data'
 import { createDriftManagementActions } from './driftManagementActions'
 import { ExecutiveReportButton } from '../../../components/ExecutiveReportButton'
 import { CippAutoComplete } from '../../../components/CippComponents/CippAutocomplete'
@@ -384,7 +384,7 @@ const ManageDriftPage = () => {
     if (!standardName) return 'Unknown Standard'
 
     // Find the standard in standards.json by name
-    const standard = standardsData.find((s) => s.name === standardName)
+    const standard = getStandards().find((s) => s.name === standardName)
     if (standard && standard.label) {
       return standard.label
     }
@@ -399,7 +399,7 @@ const ManageDriftPage = () => {
     if (!standardName) return null
 
     // Find the standard in standards.json by name
-    const standard = standardsData.find((s) => s.name === standardName)
+    const standard = getStandards().find((s) => s.name === standardName)
     if (standard) {
       return standard.helpText || standard.docsDescription || standard.executiveText || null
     }
@@ -1550,7 +1550,7 @@ const ManageDriftPage = () => {
     if (standardName.includes('QuarantineTemplate')) return 'Defender Standards'
 
     // For other standards, look up category in standards.json
-    const standard = standardsData.find((s) => s.name === standardName)
+    const standard = getStandards().find((s) => s.name === standardName)
     if (standard && standard.cat) {
       return standard.cat
     }
