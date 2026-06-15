@@ -9,8 +9,7 @@ import { CippApiDialog } from '../../../components/CippComponents/CippApiDialog'
 import { useDialog } from '../../../hooks/use-dialog'
 import CippFormComponent from '../../../components/CippComponents/CippFormComponent'
 import { CippFormCondition } from '../../../components/CippComponents/CippFormCondition'
-import M365LicensesDefault from '../../../data/M365Licenses.json'
-import M365LicensesAdditional from '../../../data/M365Licenses-additional.json'
+import { getM365Licenses } from '../../../utils/m365-licenses-data'
 import { useMemo, useCallback } from 'react'
 
 const Page = () => {
@@ -21,7 +20,7 @@ const Page = () => {
   const simpleColumns = ['Product_Display_Name', 'GUID', 'ExclusionType', 'ShowInLicenseDropdown']
 
   const allLicenseOptions = useMemo(() => {
-    const allLicenses = [...M365LicensesDefault, ...M365LicensesAdditional]
+    const allLicenses = getM365Licenses()
     const uniqueLicenses = new Map()
 
     allLicenses.forEach((license) => {
