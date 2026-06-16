@@ -264,15 +264,20 @@ const Page = () => {
       defaultvalues: {
         BatchDeleteMode: '2',
       },
-      customDataformatter: (row, action, formData) => ({
-        tenantFilter: row.Tenant ?? tenantFilter,
-        SiteUrl: row.webUrl,
-        BatchDeleteMode: parseInt(formData.BatchDeleteMode, 10),
-        DeleteOlderThanDays:
-          formData.BatchDeleteMode === '0' ? parseInt(formData.DeleteOlderThanDays, 10) : -1,
-        MajorVersionLimit:
-          formData.BatchDeleteMode === '1' ? parseInt(formData.MajorVersionLimit, 10) : -1,
-      }),
+      customDataformatter: (row, action, formData) => {
+        const formatRow = (singleRow) => ({
+          tenantFilter: singleRow.Tenant ?? tenantFilter,
+          SiteUrl: singleRow.webUrl,
+          BatchDeleteMode: parseInt(formData.BatchDeleteMode, 10),
+          DeleteOlderThanDays:
+            formData.BatchDeleteMode === '0' ? parseInt(formData.DeleteOlderThanDays, 10) : -1,
+          MajorVersionLimit:
+            formData.BatchDeleteMode === '1' ? parseInt(formData.MajorVersionLimit, 10) : -1,
+        })
+        // When multiple rows are selected, row is an array. Returning an array
+        // makes CippApiDialog send one request per row (bulk request mode).
+        return Array.isArray(row) ? row.map(formatRow) : formatRow(row)
+      },
       multiPost: false,
     },
   ]
