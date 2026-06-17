@@ -55,7 +55,7 @@
     "@vvo/tzdb": "^6.198.0",
     "apexcharts": "5.14.0",
     "axios": "1.16.1",
-    "date-fns": "4.1.0",
+    "date-fns": "4.4.0",
     "diff": "^8.0.3",
     "dompurify": "^3.4.9",
     "driver.js": "^1.4.0",
