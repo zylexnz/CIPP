@@ -83,7 +83,7 @@
     "react-beautiful-dnd": "13.1.1",
     "react-dom": "19.2.6",
     "react-dropzone": "15.0.0",
-    "react-error-boundary": "^6.1.1",
+    "react-error-boundary": "^6.1.2",
     "react-hook-form": "^7.76.1",
     "react-hot-toast": "2.6.0",
     "react-html-parser": "^2.0.2",
