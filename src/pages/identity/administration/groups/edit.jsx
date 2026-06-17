@@ -12,6 +12,8 @@ import { ApiGetCall } from "../../../../api/ApiCall";
 import { useSettings } from "../../../../hooks/use-settings";
 import { CippFormContactSelector } from "../../../../components/CippComponents/CippFormContactSelector";
 import { CippDataTable } from "../../../../components/CippTable/CippDataTable";
+import { CippFormLicenseSelector } from '../../../../components/CippComponents/CippFormLicenseSelector'
+import { getCippLicenseTranslation } from '../../../../utils/get-cipp-license-translation'
 
 const EditGroup = () => {
   const router = useRouter()
@@ -317,7 +319,7 @@ const EditGroup = () => {
                 <CippFormComponent
                   type="autoComplete"
                   name="RemoveMember"
-                  label="Remove Members"
+                  label="Remove Members (Users or Groups)"
                   formControl={formControl}
                   multiple={true}
                   isFetching={groupInfo.isFetching}
