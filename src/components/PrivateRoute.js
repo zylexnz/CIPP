@@ -2,58 +2,25 @@ import { ApiGetCall } from "../api/ApiCall.jsx";
 import UnauthenticatedPage from "../pages/unauthenticated.js";
 import LoadingPage from "../pages/loading.js";
 import ApiOfflinePage from "../pages/api-offline.js";
-import { useState, useEffect, useRef } from "react";
-
-const MAX_AUTH_ATTEMPTS = 3;
+import { useState, useEffect } from "react";
 
 export const PrivateRoute = ({ children, routeType }) => {
   const [unauthLatched, setUnauthLatched] = useState(false);
-  const [authAttempts, setAuthAttempts] = useState(0);
-  const lastSettleRef = useRef(0);
-  const authBudgetExhausted = authAttempts >= MAX_AUTH_ATTEMPTS;
 
   const session = ApiGetCall({
     url: "/.auth/me",
     queryKey: "authmeswa",
-    waiting: !authBudgetExhausted,
-    refetchOnWindowFocus: !authBudgetExhausted,
+    refetchOnWindowFocus: true,
     staleTime: 120000, // 2 minutes
   });
 
   useEffect(() => {
-    const settledAt = Math.max(session.dataUpdatedAt ?? 0, session.errorUpdatedAt ?? 0);
-    if (session.isFetching || settledAt === 0 || settledAt === lastSettleRef.current) {
-      return;
-    }
-    lastSettleRef.current = settledAt;
-    if (session.isSuccess && session.data?.clientPrincipal) {
-      setAuthAttempts(0);
-    } else {
-      setAuthAttempts((n) => Math.min(n + 1, MAX_AUTH_ATTEMPTS));
-    }
-  }, [
-    session.isFetching,
-    session.dataUpdatedAt,
-    session.errorUpdatedAt,
-    session.isSuccess,
-    session.data,
-  ]);
-
-  // Latch the unauthenticated state so refetches from child components
-  // don't flip us back to loading. Clear the latch when session succeeds (after login).
-  useEffect(() => {
-    if (
-      !session.isLoading &&
-      !session.isFetching &&
-      (session.isError ||
-        null === session?.data?.clientPrincipal ||
-        session?.data === undefined)
-    ) {
+    if (!session.isLoading && !session.isFetching && !session?.data?.clientPrincipal) {
       setUnauthLatched(true);
-    } else if (session.isSuccess && session.data?.clientPrincipal) {
+    } else if (session?.data?.clientPrincipal) {
       setUnauthLatched(false);
     }
-  }, [session.isLoading, session.isFetching, session.isError, session.isSuccess, session.data]);
+  }, [session.isLoading, session.isFetching, session.data]);
 
   const apiRoles = ApiGetCall({
     url: "/api/me",
@@ -62,7 +29,7 @@ export const PrivateRoute = ({ children, routeType }) => {
     waiting: session.isSuccess && session.data?.clientPrincipal !== null,
   });
 
-  if (unauthLatched || authBudgetExhausted) {
+  if (unauthLatched) {
     return <UnauthenticatedPage />;
   }
 
