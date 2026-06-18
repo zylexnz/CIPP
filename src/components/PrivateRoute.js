@@ -4,6 +4,13 @@ import LoadingPage from "../pages/loading.js";
 import ApiOfflinePage from "../pages/api-offline.js";
 import { useState, useEffect } from "react";
 
+// EasyAuth exposes the signed-in identity in two shapes depending on the host:
+//   - Static Web Apps:      { clientPrincipal: { userDetails, userRoles, ... } }
+//   - App Service EasyAuth: [ { user_id, user_claims: [...], access_token, ... } ]
+// an authenticated session must be detected from either populated shape.
+const hasAuthenticatedSession = (data) =>
+  Boolean(data?.clientPrincipal) || (Array.isArray(data) && data.length > 0);
+
 export const PrivateRoute = ({ children, routeType }) => {
   const [unauthLatched, setUnauthLatched] = useState(false);
 
@@ -14,36 +21,31 @@ export const PrivateRoute = ({ children, routeType }) => {
     staleTime: 120000, // 2 minutes
   });
 
-  // Latch the unauthenticated state so refetches from child components
-  // don't flip us back to loading. Clear the latch when session succeeds (after login).
+  // Latch the unauthenticated state so refetches from child components don't flip us
+  // back to loading. Latch on a request error or a settled session with no identity;
+  // clear it as soon as an authenticated session (either shape) is seen.
   useEffect(() => {
     if (
       !session.isLoading &&
       !session.isFetching &&
-      (session.isError ||
-        null === session?.data?.clientPrincipal ||
-        session?.data === undefined)
+      (session.isError || !hasAuthenticatedSession(session.data))
     ) {
       setUnauthLatched(true);
-    } else if (session.isSuccess && session.data?.clientPrincipal) {
+    } else if (hasAuthenticatedSession(session.data)) {
       setUnauthLatched(false);
     }
-  }, [session.isLoading, session.isFetching, session.isError, session.isSuccess, session.data]);
+  }, [session.isLoading, session.isFetching, session.isError, session.data]);
 
   const apiRoles = ApiGetCall({
     url: "/api/me",
     queryKey: "authmecipp",
     retry: 2,
-    waiting: session.isSuccess && session.data?.clientPrincipal !== null,
+    waiting: session.isSuccess && hasAuthenticatedSession(session.data),
   });
 
-  // If latched as unauthenticated, show the access-denied page — but while a
-  // fresh /.auth/me probe is in flight (e.g. the post-login refetch when the tab
-  // regains focus), show the "logging you in" loading page instead of flashing
-  // access-denied. The latch still holds across idle refetches; only an active
-  // fetch defers to loading.
+  // If latched as unauthenticated, always show unauthenticated page
   if (unauthLatched) {
-    return session.isFetching ? <LoadingPage /> : <UnauthenticatedPage />;
+    return <UnauthenticatedPage />;
   }
 
   // Check if the session is still loading before determining authentication status
