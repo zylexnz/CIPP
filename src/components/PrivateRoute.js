@@ -37,9 +37,13 @@ export const PrivateRoute = ({ children, routeType }) => {
     waiting: session.isSuccess && session.data?.clientPrincipal !== null,
   });
 
-  // If latched as unauthenticated, always show unauthenticated page
+  // If latched as unauthenticated, show the access-denied page — but while a
+  // fresh /.auth/me probe is in flight (e.g. the post-login refetch when the tab
+  // regains focus), show the "logging you in" loading page instead of flashing
+  // access-denied. The latch still holds across idle refetches; only an active
+  // fetch defers to loading.
   if (unauthLatched) {
-    return <UnauthenticatedPage />;
+    return session.isFetching ? <LoadingPage /> : <UnauthenticatedPage />;
   }
 
   // Check if the session is still loading before determining authentication status
