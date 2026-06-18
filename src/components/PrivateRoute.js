@@ -2,17 +2,42 @@ import { ApiGetCall } from "../api/ApiCall.jsx";
 import UnauthenticatedPage from "../pages/unauthenticated.js";
 import LoadingPage from "../pages/loading.js";
 import ApiOfflinePage from "../pages/api-offline.js";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const MAX_AUTH_ATTEMPTS = 3;
 
 export const PrivateRoute = ({ children, routeType }) => {
   const [unauthLatched, setUnauthLatched] = useState(false);
+  const [authAttempts, setAuthAttempts] = useState(0);
+  const lastSettleRef = useRef(0);
+  const authBudgetExhausted = authAttempts >= MAX_AUTH_ATTEMPTS;
 
   const session = ApiGetCall({
     url: "/.auth/me",
     queryKey: "authmeswa",
-    refetchOnWindowFocus: true,
+    waiting: !authBudgetExhausted,
+    refetchOnWindowFocus: !authBudgetExhausted,
     staleTime: 120000, // 2 minutes
   });
+
+  useEffect(() => {
+    const settledAt = Math.max(session.dataUpdatedAt ?? 0, session.errorUpdatedAt ?? 0);
+    if (session.isFetching || settledAt === 0 || settledAt === lastSettleRef.current) {
+      return;
+    }
+    lastSettleRef.current = settledAt;
+    if (session.isSuccess && session.data?.clientPrincipal) {
+      setAuthAttempts(0);
+    } else {
+      setAuthAttempts((n) => Math.min(n + 1, MAX_AUTH_ATTEMPTS));
+    }
+  }, [
+    session.isFetching,
+    session.dataUpdatedAt,
+    session.errorUpdatedAt,
+    session.isSuccess,
+    session.data,
+  ]);
 
   // Latch the unauthenticated state so refetches from child components
   // don't flip us back to loading. Clear the latch when session succeeds (after login).
@@ -37,13 +62,8 @@ export const PrivateRoute = ({ children, routeType }) => {
     waiting: session.isSuccess && session.data?.clientPrincipal !== null,
   });
 
-  // If latched as unauthenticated, show the access-denied page — but while a
-  // fresh /.auth/me probe is in flight (e.g. the post-login refetch when the tab
-  // regains focus), show the "logging you in" loading page instead of flashing
-  // access-denied. The latch still holds across idle refetches; only an active
-  // fetch defers to loading.
-  if (unauthLatched) {
-    return session.isFetching ? <LoadingPage /> : <UnauthenticatedPage />;
+  if (unauthLatched || authBudgetExhausted) {
+    return <UnauthenticatedPage />;
   }
 
   // Check if the session is still loading before determining authentication status

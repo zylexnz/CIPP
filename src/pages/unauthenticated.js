@@ -15,7 +15,8 @@ const Page = () => {
     url: "/.auth/me",
     queryKey: "authmeswa",
     staleTime: 120000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const blockedRoles = ["anonymous", "authenticated"];
