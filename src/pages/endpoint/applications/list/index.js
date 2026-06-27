@@ -27,6 +27,11 @@ const assignmentFilterTypeOptions = [
   { label: 'Exclude - Apply to devices NOT matching filter', value: 'exclude' },
 ]
 
+const assignmentDirectionOptions = [
+  { label: 'Include these group(s)', value: 'include' },
+  { label: 'Exclude these group(s)', value: 'exclude' },
+]
+
 const getAppAssignmentSettingsType = (odataType) => {
   if (!odataType || typeof odataType !== 'string') {
     return undefined
@@ -79,6 +84,7 @@ const Page = () => {
       options: assignmentFilterTypeOptions,
       defaultValue: 'include',
       helperText: 'Choose whether to include or exclude devices matching the filter.',
+      condition: { field: 'assignmentFilter', compareType: 'hasValue', clearOnHide: false },
     },
   ]
 
@@ -95,13 +101,49 @@ const Page = () => {
         AssignmentFilterType: formData?.assignmentFilter?.value
           ? formData?.assignmentFilterType || 'include'
           : null,
+        ExcludeGroupIds: (formData?.excludeGroupTargets || []).map((g) => g.value).filter(Boolean),
+        ExcludeGroupNames: (formData?.excludeGroupTargets || [])
+          .map((g) => g.label)
+          .filter(Boolean),
         ...getRowData(singleRow, formData),
       }
     }
     return Array.isArray(row) ? row.map(formatRow) : formatRow(row)
   }
 
+  // Group picker (by ID) reused for both include and exclude selection
+  const getGroupPickerField = (name, label, required) => ({
+    type: 'autoComplete',
+    name,
+    label,
+    multiple: true,
+    creatable: false,
+    allowResubmit: true,
+    ...(required && { validators: { required: 'Please select at least one group' } }),
+    api: {
+      url: '/api/ListGraphRequest',
+      dataKey: 'Results',
+      queryKey: `ListAppAssignmentGroups-${tenant}`,
+      labelField: (group) => (group.id ? `${group.displayName} (${group.id})` : group.displayName),
+      valueField: 'id',
+      addedField: {
+        description: 'description',
+      },
+      data: {
+        Endpoint: 'groups',
+        manualPagination: true,
+        $select: 'id,displayName,description',
+        $orderby: 'displayName',
+        $top: 999,
+        $count: true,
+      },
+    },
+  })
+
   const assignmentFields = [
+    { type: 'heading', label: 'Exclude groups (optional)' },
+    getGroupPickerField('excludeGroupTargets', 'Exclude group(s)', false),
+    { type: 'heading', label: 'Assignment options' },
     {
       type: 'radio',
       name: 'Intent',
@@ -121,6 +163,7 @@ const Page = () => {
       helperText:
         'Replace will overwrite existing assignments. Append keeps current assignments and adds/overwrites only for the selected groups/intents.',
     },
+    { type: 'heading', label: 'Device filter (optional)' },
     ...getAssignmentFilterFields(),
   ]
 
@@ -129,6 +172,7 @@ const Page = () => {
       label: 'Assign to All Users',
       type: 'POST',
       url: '/api/ExecAssignApp',
+      allowResubmit: true,
       fields: assignmentFields,
       customDataformatter: makeAssignFormatter((_singleRow, formData) => ({
         AssignTo: 'AllUsers',
@@ -143,6 +187,7 @@ const Page = () => {
       label: 'Assign to All Devices',
       type: 'POST',
       url: '/api/ExecAssignApp',
+      allowResubmit: true,
       fields: assignmentFields,
       customDataformatter: makeAssignFormatter((_singleRow, formData) => ({
         AssignTo: 'AllDevices',
@@ -157,6 +202,7 @@ const Page = () => {
       label: 'Assign Globally (All Users / All Devices)',
       type: 'POST',
       url: '/api/ExecAssignApp',
+      allowResubmit: true,
       fields: assignmentFields,
       customDataformatter: makeAssignFormatter((_singleRow, formData) => ({
         AssignTo: 'AllDevicesAndUsers',
@@ -171,38 +217,43 @@ const Page = () => {
       label: 'Assign to Custom Group',
       type: 'POST',
       url: '/api/ExecAssignApp',
+      allowResubmit: true,
       icon: <UserGroupIcon />,
       color: 'info',
       confirmText: 'Select the target groups and intent for "[displayName]".',
       fields: [
+        { type: 'heading', label: 'Target groups' },
         {
-          type: 'autoComplete',
-          name: 'groupTargets',
-          label: 'Group(s)',
-          multiple: true,
-          creatable: false,
-          allowResubmit: true,
-          validators: { required: 'Please select at least one group' },
-          api: {
-            url: '/api/ListGraphRequest',
-            dataKey: 'Results',
-            queryKey: `ListAppAssignmentGroups-${tenant}`,
-            labelField: (group) =>
-              group.id ? `${group.displayName} (${group.id})` : group.displayName,
-            valueField: 'id',
-            addedField: {
-              description: 'description',
-            },
-            data: {
-              Endpoint: 'groups',
-              manualPagination: true,
-              $select: 'id,displayName,description',
-              $orderby: 'displayName',
-              $top: 999,
-              $count: true,
+          ...getGroupPickerField('groupTargets', 'Group(s)', false),
+          helperText:
+            'Leave empty with Exclude + Replace to remove all exclusions (keeps includes).',
+          validators: {
+            // Required, except Exclude + Replace where an empty selection clears all exclusions.
+            validate: (value, formValues) => {
+              if (
+                formValues?.assignmentDirection === 'exclude' &&
+                (formValues?.assignmentMode || 'replace') === 'replace'
+              ) {
+                return true
+              }
+              return (
+                (Array.isArray(value) && value.length > 0) || 'Please select at least one group'
+              )
             },
           },
         },
+        {
+          type: 'radio',
+          name: 'assignmentDirection',
+          label: 'Assignment direction',
+          options: assignmentDirectionOptions,
+          defaultValue: 'include',
+          // Re-validate the picker so the empty-allowed rule updates when direction changes.
+          validators: { deps: ['groupTargets'] },
+          helperText:
+            'Include assigns to these groups; Exclude excludes them. Replace updates only this direction and keeps the other (and All Users/All Devices) intact.',
+        },
+        { type: 'heading', label: 'Assignment options' },
         {
           type: 'radio',
           name: 'assignmentIntent',
@@ -219,16 +270,25 @@ const Page = () => {
           label: 'Assignment mode',
           options: assignmentModeOptions,
           defaultValue: 'replace',
+          // Re-validate the picker so the empty-allowed rule updates when mode changes.
+          validators: { deps: ['groupTargets'] },
           helperText:
-            'Replace will overwrite existing assignments. Append keeps current assignments and adds/overwrites only for the selected groups/intents.',
+            'Replace updates only the selected direction and keeps the other direction plus All Users/All Devices. Append adds the selected groups to existing assignments.',
         },
+        { type: 'heading', label: 'Device filter (optional)' },
         ...getAssignmentFilterFields(),
       ],
       customDataformatter: makeAssignFormatter((_singleRow, formData) => {
         const selectedGroups = Array.isArray(formData?.groupTargets) ? formData.groupTargets : []
+        const isExclude = formData?.assignmentDirection === 'exclude'
+        const ids = selectedGroups.map((group) => group.value).filter(Boolean)
+        const names = selectedGroups.map((group) => group.label).filter(Boolean)
         return {
-          GroupIds: selectedGroups.map((group) => group.value).filter(Boolean),
-          GroupNames: selectedGroups.map((group) => group.label).filter(Boolean),
+          GroupIds: isExclude ? [] : ids,
+          GroupNames: isExclude ? [] : names,
+          ExcludeGroupIds: isExclude ? ids : [],
+          ExcludeGroupNames: isExclude ? names : [],
+          assignmentDirection: formData?.assignmentDirection || 'include',
           Intent: formData?.assignmentIntent || 'Required',
           AssignmentMode: formData?.assignmentMode || 'replace',
         }

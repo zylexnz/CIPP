@@ -31,6 +31,11 @@ const assignmentModeOptions = [
   { label: 'Append to existing assignments', value: 'append' },
 ]
 
+const assignmentDirectionOptions = [
+  { label: 'Include these group(s)', value: 'include' },
+  { label: 'Exclude these group(s)', value: 'exclude' },
+]
+
 const Page = () => {
   const pageTitle = 'Scripts'
   const [codeOpen, setCodeOpen] = useState(false)
@@ -190,11 +195,41 @@ const Page = () => {
     return mapping[scriptType] || 'deviceManagementScripts'
   }
 
+  // Group picker (by ID) reused for both include and exclude selection
+  const getGroupPickerField = (name, label, required) => ({
+    type: 'autoComplete',
+    name,
+    label,
+    multiple: true,
+    creatable: false,
+    allowResubmit: true,
+    ...(required && { validators: { required: 'Please select at least one group' } }),
+    api: {
+      url: '/api/ListGraphRequest',
+      dataKey: 'Results',
+      queryKey: `ListScriptAssignmentGroups-${tenantFilter}`,
+      labelField: (group) => (group.id ? `${group.displayName} (${group.id})` : group.displayName),
+      valueField: 'id',
+      addedField: {
+        description: 'description',
+      },
+      data: {
+        Endpoint: 'groups',
+        manualPagination: true,
+        $select: 'id,displayName,description',
+        $orderby: 'displayName',
+        $top: 999,
+        $count: true,
+      },
+    },
+  })
+
   const actions = [
     {
       label: 'Assign to All Users',
       type: 'POST',
       url: '/api/ExecAssignPolicy',
+      allowResubmit: true,
       icon: <UserIcon />,
       color: 'info',
       fields: [
@@ -221,6 +256,7 @@ const Page = () => {
       label: 'Assign to All Devices',
       type: 'POST',
       url: '/api/ExecAssignPolicy',
+      allowResubmit: true,
       icon: <LaptopChromebook />,
       color: 'info',
       fields: [
@@ -247,6 +283,7 @@ const Page = () => {
       label: 'Assign Globally (All Users / All Devices)',
       type: 'POST',
       url: '/api/ExecAssignPolicy',
+      allowResubmit: true,
       icon: <GlobeAltIcon />,
       color: 'info',
       fields: [
@@ -273,56 +310,69 @@ const Page = () => {
       label: 'Assign to Custom Group',
       type: 'POST',
       url: '/api/ExecAssignPolicy',
+      allowResubmit: true,
       icon: <UserGroupIcon />,
       color: 'info',
       confirmText: 'Select the target groups for "[displayName]".',
       fields: [
+        { type: 'heading', label: 'Target groups' },
         {
-          type: 'autoComplete',
-          name: 'groupTargets',
-          label: 'Group(s)',
-          multiple: true,
-          creatable: false,
-          allowResubmit: true,
-          validators: { required: 'Please select at least one group' },
-          api: {
-            url: '/api/ListGraphRequest',
-            dataKey: 'Results',
-            queryKey: `ListScriptAssignmentGroups-${tenantFilter}`,
-            labelField: (group) =>
-              group.id ? `${group.displayName} (${group.id})` : group.displayName,
-            valueField: 'id',
-            addedField: {
-              description: 'description',
-            },
-            data: {
-              Endpoint: 'groups',
-              manualPagination: true,
-              $select: 'id,displayName,description',
-              $orderby: 'displayName',
-              $top: 999,
-              $count: true,
+          ...getGroupPickerField('groupTargets', 'Group(s)', false),
+          helperText:
+            'Leave empty with Exclude + Replace to remove all exclusions (keeps includes).',
+          validators: {
+            // Required, except Exclude + Replace where an empty selection clears all exclusions.
+            validate: (value, formValues) => {
+              if (
+                formValues?.assignmentDirection === 'exclude' &&
+                (formValues?.assignmentMode || 'replace') === 'replace'
+              ) {
+                return true
+              }
+              return (
+                (Array.isArray(value) && value.length > 0) || 'Please select at least one group'
+              )
             },
           },
         },
+        {
+          type: 'radio',
+          name: 'assignmentDirection',
+          label: 'Assignment direction',
+          options: assignmentDirectionOptions,
+          defaultValue: 'include',
+          // Re-validate the picker so the empty-allowed rule updates when direction changes.
+          validators: { deps: ['groupTargets'] },
+          helperText:
+            'Include assigns to these groups; Exclude excludes them. Replace updates only this direction and keeps the other (and All Users/All Devices) intact.',
+        },
+        { type: 'heading', label: 'Assignment options' },
         {
           type: 'radio',
           name: 'assignmentMode',
           label: 'Assignment mode',
           options: assignmentModeOptions,
           defaultValue: 'replace',
+          // Re-validate the picker so the empty-allowed rule updates when mode changes.
+          validators: { deps: ['groupTargets'] },
           helperText:
-            'Replace will overwrite existing assignments. Append keeps current assignments and adds the new ones.',
+            'Replace updates only the selected direction and keeps the other direction plus All Users/All Devices. Append adds the selected groups to existing assignments.',
         },
       ],
       customDataformatter: (row, action, formData) => {
         const selectedGroups = Array.isArray(formData?.groupTargets) ? formData.groupTargets : []
+        const isExclude = formData?.assignmentDirection === 'exclude'
+        const ids = selectedGroups.map((group) => group.value).filter(Boolean)
+        const names = selectedGroups.map((group) => group.label).filter(Boolean)
         return {
           tenantFilter: tenantFilter === 'AllTenants' && row?.Tenant ? row.Tenant : tenantFilter,
           ID: row?.id,
           Type: getScriptEndpoint(row?.scriptType),
-          GroupIds: selectedGroups.map((group) => group.value).filter(Boolean),
-          GroupNames: selectedGroups.map((group) => group.label).filter(Boolean),
+          GroupIds: isExclude ? [] : ids,
+          GroupNames: isExclude ? [] : names,
+          ExcludeGroupIds: isExclude ? ids : [],
+          ExcludeGroupNames: isExclude ? names : [],
+          assignmentDirection: formData?.assignmentDirection || 'include',
           assignmentMode: formData?.assignmentMode || 'replace',
         }
       },

@@ -15,6 +15,7 @@ import { useRouter } from "next/router";
 import { useForm, useFormState } from "react-hook-form";
 import { useSettings } from "../../hooks/use-settings";
 import CippFormComponent from "./CippFormComponent";
+import { CippFormCondition } from "./CippFormCondition";
 
 export const CippApiDialog = (props) => {
   const {
@@ -382,17 +383,29 @@ export const CippApiDialog = (props) => {
                   )
                 ) : (
                   <>
-                    {fields?.map((fieldProps, i) => (
-                      <Box key={i} sx={{ width: "100%" }}>
+                    {fields?.map((fieldProps, i) => {
+                      const { condition, ...rest } = fieldProps;
+                      const fieldElement = (
                         <CippFormComponent
                           formControl={formHook}
                           addedFieldData={addedFieldData}
                           setAddedFieldData={setAddedFieldData}
                           row={row}
-                          {...fieldProps}
+                          {...rest}
                         />
-                      </Box>
-                    ))}
+                      );
+                      return (
+                        <Box key={i} sx={{ width: "100%" }}>
+                          {condition ? (
+                            <CippFormCondition {...condition} formControl={formHook}>
+                              {fieldElement}
+                            </CippFormCondition>
+                          ) : (
+                            fieldElement
+                          )}
+                        </Box>
+                      );
+                    })}
                   </>
                 )}
               </Stack>
