@@ -151,9 +151,9 @@ const ManageDriftPage = () => {
     const settingName = getDriftTaskSettingName(standardName)
     if (!settingName || !tenantFilter) return false
 
-    const expectedTaskName =
+    const expectedPrefix =
       `Persistent Drift Remediation: ${settingName} - ${tenantFilter}`.toLowerCase()
-    return persistentTaskNameSet.has(expectedTaskName)
+    return [...persistentTaskNameSet].some((name) => name.startsWith(expectedPrefix))
   }
 
   // Process drift data for chart - filter by current tenant and aggregate
@@ -1948,11 +1948,11 @@ const ManageDriftPage = () => {
                               onClick={() => handleBulkAction('accept-all-customer-specific')}
                             >
                               <CheckBox sx={{ mr: 1, color: 'success.main' }} />
-                              Accept All Deviations - Customer Specific
+                              Accept Selected Deviations - Customer Specific
                             </MenuItem>
                             <MenuItem onClick={() => handleBulkAction('accept-all')}>
                               <Check sx={{ mr: 1, color: 'info.main' }} />
-                              Accept All Deviations
+                              Accept Selected Deviations
                             </MenuItem>
                             {/* Only show delete option if there are template deviations that support deletion */}
                             {processedDriftData.currentDeviations.some(
@@ -1965,12 +1965,12 @@ const ManageDriftPage = () => {
                             ) && (
                               <MenuItem onClick={() => handleBulkAction('deny-all-delete')}>
                                 <Block sx={{ mr: 1, color: 'error.main' }} />
-                                Deny All Deviations - Delete
+                                Deny Selected Deviations - Delete
                               </MenuItem>
                             )}
                             <MenuItem onClick={() => handleBulkAction('deny-all-remediate')}>
                               <Cancel sx={{ mr: 1, color: 'error.main' }} />
-                              Deny All Deviations - Remediate to align with template
+                              Deny Selected Deviations - Remediate to align with template
                             </MenuItem>
                             <MenuItem onClick={handleRemoveDriftCustomization}>
                               <Block sx={{ mr: 1, color: 'warning.main' }} />
@@ -2068,6 +2068,7 @@ const ManageDriftPage = () => {
               type: 'textField',
               name: 'reason',
               label: 'Reason for change (Mandatory)',
+              required: true,
             },
             ...(actionData.data?.deviations?.some((d) => d.status === 'DeniedRemediate')
               ? [
