@@ -81,6 +81,10 @@ const compareNullable = (aVal, bVal) => {
 // These never change between renders, so extracting them avoids creating new
 // object references on every render cycle.
 
+// Stable ref so an undefined `data` prop doesn't create a fresh [] each render
+// and loop the static-data sync effect.
+const EMPTY_ARRAY = []
+
 const SORTING_FNS = {
   dateTimeNullsLast: (a, b, id) => {
     const aRaw = getRowValueByColumnId(a, id)
@@ -328,7 +332,7 @@ function renderColumnFilterModeMenuItemsFn({ internalFilterOptions, onSelectFilt
 export const CippDataTable = (props) => {
   const {
     queryKey,
-    data = [],
+    data = EMPTY_ARRAY,
     columns = [],
     api = {},
     isFetching = false,
