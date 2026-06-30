@@ -50,7 +50,7 @@ const CippAddEditUser = (props) => {
   // Get all groups for the tenant
   const tenantGroups = ApiGetCall({
     url: `/api/ListGroups?tenantFilter=${tenantDomain}`,
-    queryKey: `ListGroups-${tenantDomain}`,
+    queryKey: `TenantGroupsList-${tenantDomain}`,
     refetchOnMount: false,
     refetchOnReconnect: false,
   })
@@ -318,7 +318,12 @@ const CippAddEditUser = (props) => {
       setFieldIfEmpty('companyName', template.companyName)
       setFieldIfEmpty('department', template.department)
       setFieldIfEmpty('mobilePhone', template.mobilePhone)
-      setFieldIfEmpty('businessPhones[0]', template.businessPhones)
+      const templateBusinessPhone = Array.isArray(template.businessPhones)
+        ? template.businessPhones[0]
+        : template.businessPhones
+      if (templateBusinessPhone) {
+        formControl.setValue('businessPhones', [templateBusinessPhone])
+      }
 
       // Handle licenses - need to match the format expected by CippFormLicenseSelector
       if (template.licenses && Array.isArray(template.licenses)) {
@@ -824,7 +829,8 @@ const CippAddEditUser = (props) => {
               label: group.displayName,
               value: group.id,
               addedFields: {
-                groupType: group.calculatedGroupType || group.groupType,
+                groupType: group.groupType,
+                calculatedGroupType: group.calculatedGroupType,
               },
             })) || []
           }
