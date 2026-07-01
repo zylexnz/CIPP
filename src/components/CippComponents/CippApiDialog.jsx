@@ -334,7 +334,7 @@ export const CippApiDialog = (props) => {
         (_, key) => getNestedValue(row, key) || `[${key}]`,
       );
     } else if (row.length > 1) {
-      confirmText = api.confirmText.replace(/\[([^\]]+)\]/g, "the selected rows");
+      confirmText = api.confirmText.replace(/\[([^\]]+)\]/g, `the ${row.length} selected rows`);
     } else if (row.length === 1) {
       confirmText = api.confirmText.replace(
         /\[([^\]]+)\]/g,
@@ -347,7 +347,7 @@ export const CippApiDialog = (props) => {
       if (typeof element === "string") {
         if (Array.isArray(row)) {
           return row.length > 1
-            ? element.replace(/\[([^\]]+)\]/g, "the selected rows")
+            ? element.replace(/\[([^\]]+)\]/g, `the ${row.length} selected rows`)
             : element.replace(
                 /\[([^\]]+)\]/g,
                 (_, key) => getNestedValue(row[0], key) || `[${key}]`,
