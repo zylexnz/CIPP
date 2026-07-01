@@ -734,13 +734,16 @@ export const CippDataTable = (props) => {
             sx={{ color: action.color }}
             key={`actions-list-row-${index}`}
             onClick={() => {
-              if (settings.currentTenant === 'AllTenants' && row.original?.Tenant) {
-                settings.handleUpdate({
-                  currentTenant: row.original.Tenant,
-                })
+              const scopeToRowTenant = () => {
+                if (settings.currentTenant === 'AllTenants' && row.original?.Tenant) {
+                  settings.handleUpdate({
+                    currentTenant: row.original.Tenant,
+                  })
+                }
               }
 
               if (action.noConfirm && action.customFunction) {
+                scopeToRowTenant()
                 action.customFunction(row.original, action, {})
                 closeMenu()
                 return
@@ -748,6 +751,7 @@ export const CippDataTable = (props) => {
 
               // Handle custom component differently
               if (typeof action.customComponent === 'function') {
+                scopeToRowTenant()
                 setCustomComponentData({ data: row.original, action: action })
                 setCustomComponentVisible(true)
                 closeMenu()
