@@ -28,6 +28,19 @@ export const CippExchangeInfoCard = (props) => {
     { name: 'IMAP', enabled: exchangeData?.MailboxImapEnabled },
     { name: 'POP', enabled: exchangeData?.MailboxPopEnabled },
     { name: 'ActiveSync', enabled: exchangeData?.MailboxActiveSyncEnabled },
+    {
+      // SMTP client auth is inverted: true = disabled (secure), false = enabled (risk),
+      // null = unknown. Label spells out the state so a green chip isn't misread as "on".
+      name:
+        exchangeData?.SmtpClientAuthenticationDisabled == null
+          ? 'SMTP Unknown'
+          : exchangeData?.SmtpClientAuthenticationDisabled === false
+            ? 'SMTP Enabled'
+            : 'SMTP Disabled',
+      enabled: exchangeData?.SmtpClientAuthenticationDisabled === false,
+      unknown: exchangeData?.SmtpClientAuthenticationDisabled == null,
+      riskWhenEnabled: true,
+    },
   ]
 
   // Define mailbox hold types array
@@ -316,17 +329,30 @@ export const CippExchangeInfoCard = (props) => {
               <Skeleton variant="text" width={200} />
             ) : (
               <div>
-                {protocols.map((protocol) => (
-                  <Chip
-                    key={protocol.name}
-                    label={protocol.name}
-                    icon={protocol.enabled ? <CheckIcon /> : <CloseIcon />}
-                    color={protocol.enabled ? 'success' : 'default'}
-                    variant="outlined"
-                    size="small"
-                    sx={{ mr: 1, mb: 1 }}
-                  />
-                ))}
+                {protocols.map((protocol) => {
+                  // For normal protocols, enabled = good (green). SMTP is inverted:
+                  // enabled = risk (red), disabled = good (green). Unknown stays neutral.
+                  const isGood = protocol.riskWhenEnabled ? !protocol.enabled : protocol.enabled
+                  return (
+                    <Chip
+                      key={protocol.name}
+                      label={protocol.name}
+                      icon={protocol.unknown ? undefined : isGood ? <CheckIcon /> : <CloseIcon />}
+                      color={
+                        protocol.unknown
+                          ? 'default'
+                          : isGood
+                            ? 'success'
+                            : protocol.riskWhenEnabled
+                              ? 'error'
+                              : 'default'
+                      }
+                      variant="outlined"
+                      size="small"
+                      sx={{ mr: 1, mb: 1 }}
+                    />
+                  )
+                })}
               </div>
             )
           }
