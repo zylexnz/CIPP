@@ -3,8 +3,125 @@ import { CippTablePage } from '../../../../components/CippComponents/CippTablePa
 import { useState } from 'react'
 import { Tooltip, Chip } from '@mui/material'
 import { Stack } from '@mui/system'
-import { Person, Inbox } from '@mui/icons-material'
+import { Person, Inbox, Delete } from '@mui/icons-material'
 import { useCippReportDB } from '../../../../components/CippComponents/CippReportDBControls'
+
+const byMailboxActions = [
+  {
+    label: 'Bulk Remove Mailbox Permissions',
+    type: 'POST',
+    url: '/api/ExecModifyMBPerms',
+    icon: <Delete />,
+    confirmText: 'Remove the selected permissions from the selected mailboxes?',
+    multiPost: false,
+    fields: [
+      {
+        type: 'autoComplete',
+        name: 'permissionsToRemove',
+        label: 'Permissions to remove',
+        multiple: true,
+        creatable: false,
+        required: true,
+        options: (rows) => {
+          const rowArray = Array.isArray(rows) ? rows : [rows]
+          const seen = new Set()
+          const options = []
+          rowArray.forEach((row) =>
+            (row?.Permissions ?? []).forEach((p) => {
+              const key = `${p.User}|${p.AccessRights}`
+              if (!seen.has(key)) {
+                seen.add(key)
+                options.push({ label: `${p.User} — ${p.AccessRights}`, value: key })
+              }
+            })
+          )
+          return options
+        },
+      },
+    ],
+    customDataformatter: (rows, action, formData) => {
+      const rowArray = Array.isArray(rows) ? rows : [rows]
+      const selected = new Set((formData.permissionsToRemove ?? []).map((o) => o.value))
+      // Group per tenant; only remove grants each mailbox actually has
+      const byTenant = {}
+      rowArray.forEach((mailbox) => {
+        const permissions = (mailbox.Permissions ?? [])
+          .filter((p) => selected.has(`${p.User}|${p.AccessRights}`))
+          .map((p) => ({
+            UserID: p.User,
+            PermissionLevel: p.AccessRights,
+            Modification: 'Remove',
+          }))
+        if (!permissions.length) return
+        ;(byTenant[mailbox.Tenant] ??= []).push({ userID: mailbox.MailboxUPN, permissions })
+      })
+      // Array return => one POST per tenant, so AllTenants selections work
+      return Object.entries(byTenant).map(([tenantFilter, mailboxRequests]) => ({
+        mailboxRequests,
+        tenantFilter,
+      }))
+    },
+  },
+]
+
+const byUserActions = [
+  {
+    label: 'Bulk Remove Mailbox Permissions',
+    type: 'POST',
+    url: '/api/ExecModifyMBPerms',
+    icon: <Delete />,
+    confirmText: "Remove the selected users' permissions from the selected mailboxes?",
+    multiPost: false,
+    fields: [
+      {
+        type: 'autoComplete',
+        name: 'permissionsToRemove',
+        label: 'Mailbox permissions to remove',
+        multiple: true,
+        creatable: false,
+        required: true,
+        options: (rows) => {
+          const rowArray = Array.isArray(rows) ? rows : [rows]
+          const seen = new Set()
+          const options = []
+          rowArray.forEach((row) =>
+            (row?.Permissions ?? []).forEach((p) => {
+              const key = `${p.MailboxUPN}|${p.AccessRights}`
+              if (!seen.has(key)) {
+                seen.add(key)
+                options.push({ label: `${p.MailboxUPN} — ${p.AccessRights}`, value: key })
+              }
+            })
+          )
+          return options
+        },
+      },
+    ],
+    customDataformatter: (rows, action, formData) => {
+      const rowArray = Array.isArray(rows) ? rows : [rows]
+      const selected = new Set((formData.permissionsToRemove ?? []).map((o) => o.value))
+      // Group per tenant; strip each selected user from the chosen mailboxes only
+      const byTenant = {}
+      rowArray.forEach((user) => {
+        ;(user.Permissions ?? [])
+          .filter((p) => selected.has(`${p.MailboxUPN}|${p.AccessRights}`))
+          .forEach((p) => {
+            ;(byTenant[user.Tenant] ??= []).push({
+              userID: p.MailboxUPN,
+              permissions: [
+                { UserID: user.User, PermissionLevel: p.AccessRights, Modification: 'Remove' },
+              ],
+            })
+          })
+      })
+      // Array return => one POST per tenant, so AllTenants selections work
+      return Object.entries(byTenant).map(([tenantFilter, mailboxRequests]) => ({
+        mailboxRequests,
+        tenantFilter,
+      }))
+    },
+  },
+]
 
 const Page = () => {
   const [byUser, setByUser] = useState(true)
@@ -69,6 +186,7 @@ const Page = () => {
         queryKey={`${reportDB.resolvedQueryKey}-${byUser}`}
         apiData={{ ...reportDB.resolvedApiData, ByUser: byUser }}
         simpleColumns={columns}
+        actions={byUser ? byUserActions : byMailboxActions}
         cardButton={pageActions}
         offCanvas={null}
       />
