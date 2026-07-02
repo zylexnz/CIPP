@@ -73,7 +73,10 @@ const Page = () => {
   });
 
   const mailboxAccessRequest = ApiGetCall({
-    url: `/api/ListMailboxPermissions?tenantFilter=${userSettingsDefaults.currentTenant}&UseReportDB=true&ByUser=true&User=${graphUserRequest.data?.[0]?.userPrincipalName}`,
+    // Encode the UPN - guest UPNs contain #EXT#, which would truncate the query string
+    url: `/api/ListMailboxPermissions?tenantFilter=${userSettingsDefaults.currentTenant}&UseReportDB=true&ByUser=true&User=${encodeURIComponent(
+      graphUserRequest.data?.[0]?.userPrincipalName ?? "",
+    )}`,
     queryKey: `MailboxAccess-${userId}`,
     waiting: waiting && !!graphUserRequest.data?.[0]?.userPrincipalName,
   });
@@ -702,8 +705,9 @@ const Page = () => {
         ),
       },
       text: "Mailbox Access",
-      subtext:
-        mailboxAccessData.length !== 0
+      subtext: mailboxAccessRequest.isError
+        ? "Could not load the cached permission report - sync the mailbox permissions cache and try again"
+        : mailboxAccessData.length !== 0
           ? "This user has access to other mailboxes (from the cached permission report)"
           : "This user has no access to other mailboxes (from the cached permission report)",
       statusColor: "green.main",
