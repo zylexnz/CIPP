@@ -548,6 +548,7 @@ export const nativeMenuItems = [
             title: 'Application Templates',
             path: '/endpoint/applications/templates',
             permissions: ['Endpoint.Application.*'],
+            scope: 'global',
           },
         ],
       },
