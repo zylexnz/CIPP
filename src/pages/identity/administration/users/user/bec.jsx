@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Layout as DashboardLayout } from '../../../../../layouts/index.js'
 import { useSettings } from '../../../../../hooks/use-settings'
 import { useRouter } from 'next/router'
@@ -18,6 +18,7 @@ import { PropertyList } from '../../../../../components/property-list'
 import { PropertyListItem } from '../../../../../components/property-list-item'
 import { CippHead } from '../../../../../components/CippComponents/CippHead'
 import { BECRemediationReportButton } from '../../../../../components/BECRemediationReportButton'
+import { CippDataTable } from '../../../../../components/CippTable/CippDataTable'
 
 const checkItemSx = { px: 2, py: 0.75 }
 
@@ -205,6 +206,15 @@ const Page = () => {
     if (!value) return 'unchanged'
     return Array.isArray(value) ? value.join(', ') || 'unchanged' : String(value)
   }
+
+  // ponytail: stable identity matters — a new array each render would loop CippDataTable's data-sync effect
+  const senderRows = useMemo(
+    () => [
+      ...(becPollingCall.data?.TrustedSenders || []).map((s) => ({ Sender: s, Type: 'Trusted' })),
+      ...(becPollingCall.data?.BlockedSenders || []).map((s) => ({ Sender: s, Type: 'Blocked' })),
+    ],
+    [becPollingCall.data]
+  )
 
   const subtitle = userRequest.isSuccess
     ? [
@@ -458,17 +468,14 @@ const Page = () => {
                     {getSentMessagesMessage()}
                   </Typography>
                   {becPollingCall.data?.SentMessages?.length > 0 && (
-                    <Box mt={2} sx={{ maxHeight: 300, overflowY: 'auto' }}>
-                      <PropertyList>
-                        {becPollingCall.data.SentMessages.map((message, index) => (
-                          <PropertyListItem
-                            key={index}
-                            sx={checkItemSx}
-                            label={`${message?.Subject} to ${message?.RecipientAddress}`}
-                            value={`Status: ${message?.Status} | Sent: ${message?.Received} | From IP: ${message?.FromIP}`}
-                          />
-                        ))}
-                      </PropertyList>
+                    <Box mt={2}>
+                      <CippDataTable
+                        noCard={true}
+                        hideTitle={true}
+                        title="Sent Messages"
+                        data={becPollingCall.data.SentMessages}
+                        simpleColumns={['Subject', 'RecipientAddress', 'Status', 'Received', 'FromIP']}
+                      />
                     </Box>
                   )}
                 </BecCheckCard>
@@ -534,44 +541,15 @@ const Page = () => {
                   <Typography variant="body2" gutterBottom>
                     {getSafelistMessage()}
                   </Typography>
-                  {becPollingCall.data?.TrustedSenders?.length > 0 && (
+                  {senderRows.length > 0 && (
                     <Box mt={2}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Trusted senders/domains
-                      </Typography>
-                      <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
-                        <PropertyList>
-                          {becPollingCall.data.TrustedSenders.map((sender, index) => (
-                            <PropertyListItem
-                              key={index}
-                              sx={checkItemSx}
-                              align="horizontal"
-                              label={sender}
-                              value="Trusted"
-                            />
-                          ))}
-                        </PropertyList>
-                      </Box>
-                    </Box>
-                  )}
-                  {becPollingCall.data?.BlockedSenders?.length > 0 && (
-                    <Box mt={2}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Blocked senders/domains
-                      </Typography>
-                      <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
-                        <PropertyList>
-                          {becPollingCall.data.BlockedSenders.map((sender, index) => (
-                            <PropertyListItem
-                              key={index}
-                              sx={checkItemSx}
-                              align="horizontal"
-                              label={sender}
-                              value="Blocked"
-                            />
-                          ))}
-                        </PropertyList>
-                      </Box>
+                      <CippDataTable
+                        noCard={true}
+                        hideTitle={true}
+                        title="Trusted & Blocked Senders"
+                        data={senderRows}
+                        simpleColumns={['Sender', 'Type']}
+                      />
                     </Box>
                   )}
                   {becPollingCall.data?.SafelistChanges?.length > 0 && (
