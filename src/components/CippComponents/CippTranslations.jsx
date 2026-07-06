@@ -1,5 +1,9 @@
 export const CippTranslations = {
   userPrincipalName: 'User Principal Name',
+  aadRegistered: 'Microsoft Entra Registered',
+  azureADRegistered: 'Microsoft Entra Registered',
+  azureActiveDirectoryDeviceId: 'Microsoft Entra Device ID',
+  azureADDeviceId: 'Microsoft Entra Device ID',
   aiTool: 'AI Tool',
   applicationId: 'Application ID',
   signInsLast7Days: 'Sign-ins (7 Days)',
