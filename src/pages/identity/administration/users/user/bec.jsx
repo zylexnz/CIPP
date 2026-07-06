@@ -1,49 +1,49 @@
-import { useEffect, useState } from "react";
-import { Layout as DashboardLayout } from "../../../../../layouts/index.js";
-import { useSettings } from "../../../../../hooks/use-settings";
-import { useRouter } from "next/router";
-import { ApiGetCall } from "../../../../../api/ApiCall";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { CheckCircle, Download, Mail, Fingerprint, Launch } from "@mui/icons-material";
-import { HeaderedTabbedLayout } from "../../../../../layouts/HeaderedTabbedLayout";
-import tabOptions from "./tabOptions";
-import ReactTimeAgo from "react-time-ago";
-import { CippCopyToClipBoard } from "../../../../../components/CippComponents/CippCopyToClipboard";
-import { Box, Stack } from "@mui/system";
-import { Grid } from "@mui/system";
-import CippRemediationCard from "../../../../../components/CippCards/CippRemediationCard";
-import CippButtonCard from "../../../../../components/CippCards/CippButtonCard";
-import { SvgIcon, Typography, CircularProgress, Button } from "@mui/material";
-import { PropertyList } from "../../../../../components/property-list";
-import { PropertyListItem } from "../../../../../components/property-list-item";
-import { CippHead } from "../../../../../components/CippComponents/CippHead";
-import { BECRemediationReportButton } from "../../../../../components/BECRemediationReportButton";
+import { useEffect, useState } from 'react'
+import { Layout as DashboardLayout } from '../../../../../layouts/index.js'
+import { useSettings } from '../../../../../hooks/use-settings'
+import { useRouter } from 'next/router'
+import { ApiGetCall } from '../../../../../api/ApiCall'
+import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon'
+import { CheckCircle, Download, Mail, Fingerprint, Launch } from '@mui/icons-material'
+import { HeaderedTabbedLayout } from '../../../../../layouts/HeaderedTabbedLayout'
+import tabOptions from './tabOptions'
+import ReactTimeAgo from 'react-time-ago'
+import { CippCopyToClipBoard } from '../../../../../components/CippComponents/CippCopyToClipboard'
+import { Box, Stack } from '@mui/system'
+import { Grid } from '@mui/system'
+import CippRemediationCard from '../../../../../components/CippCards/CippRemediationCard'
+import CippButtonCard from '../../../../../components/CippCards/CippButtonCard'
+import { SvgIcon, Typography, CircularProgress, Button } from '@mui/material'
+import { PropertyList } from '../../../../../components/property-list'
+import { PropertyListItem } from '../../../../../components/property-list-item'
+import { CippHead } from '../../../../../components/CippComponents/CippHead'
+import { BECRemediationReportButton } from '../../../../../components/BECRemediationReportButton'
 
 const Page = () => {
-  const userSettingsDefaults = useSettings();
-  const router = useRouter();
-  const { userId } = router.query;
-  const [isLoading, setIsLoading] = useState(true);
-  const [restart, setRestart] = useState(false);
-  const [initialReady, setInitialReady] = useState(false);
-  const [becCheckReady, setBecCheckReady] = useState(false);
+  const userSettingsDefaults = useSettings()
+  const router = useRouter()
+  const { userId } = router.query
+  const [isLoading, setIsLoading] = useState(true)
+  const [restart, setRestart] = useState(false)
+  const [initialReady, setInitialReady] = useState(false)
+  const [becCheckReady, setBecCheckReady] = useState(false)
   const userRequest = ApiGetCall({
     url: `/api/ListUsers?UserId=${userId}&tenantFilter=${userSettingsDefaults.currentTenant}`,
     queryKey: `ListUsers-${userId}`,
     waiting: initialReady,
-  });
+  })
 
   useEffect(() => {
     if (userId) {
-      setInitialReady(true);
+      setInitialReady(true)
     }
-  }, [userId]);
+  }, [userId])
 
   useEffect(() => {
     if (userRequest.isSuccess && userRequest.data?.[0]?.userPrincipalName) {
-      setBecCheckReady(true);
+      setBecCheckReady(true)
     }
-  }, [userRequest]);
+  }, [userRequest])
 
   const becInitialCall = ApiGetCall({
     url: `/api/execBECCheck`,
@@ -55,7 +55,7 @@ const Page = () => {
     },
     queryKey: `execBECCheck-initial-${userId}-${userSettingsDefaults.currentTenant}-${userRequest.data?.[0]?.userPrincipalName}`,
     waiting: becCheckReady,
-  });
+  })
 
   // Fetch BEC Check result using GUID
   const becPollingCall = ApiGetCall({
@@ -66,101 +66,120 @@ const Page = () => {
     },
     queryKey: `execBECCheck-polling-${becInitialCall.data?.GUID}`,
     waiting: false,
-  });
+  })
 
   // Effect to monitor becGuid and start polling
   useEffect(() => {
     if (becInitialCall.data?.GUID) {
-      setIsLoading(true);
+      setIsLoading(true)
       if (!becPollingCall.data || becPollingCall.data?.Waiting) {
         setTimeout(() => {
-          becPollingCall.refetch();
-        }, 10000);
+          becPollingCall.refetch()
+        }, 10000)
       }
     }
 
     if (becPollingCall.isSuccess && becPollingCall.data && !becPollingCall.data?.Waiting) {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, [becPollingCall.dataUpdatedAt, becInitialCall]);
+  }, [becPollingCall.dataUpdatedAt, becInitialCall])
 
   const restartProcess = () => {
-    setRestart(true);
-    becPollingCall.refetch();
+    setRestart(true)
+    becPollingCall.refetch()
     setTimeout(() => {
-      becInitialCall.refetch();
-      becPollingCall.refetch();
-    }, 500);
-  };
+      becInitialCall.refetch()
+      becPollingCall.refetch()
+    }, 500)
+  }
 
   // Combine loading states
   const isFetching =
-    userRequest.isLoading || becInitialCall.isLoading || becPollingCall.isLoading || isLoading;
+    userRequest.isLoading || becInitialCall.isLoading || becPollingCall.isLoading || isLoading
 
   // Helper functions to determine messages
   const getRuleMessage = () => {
-    if (!becPollingCall.data) return null;
+    if (!becPollingCall.data) return null
     if (becPollingCall.data.NewRules && becPollingCall.data.NewRules.length > 0) {
       // Example condition to check for potential breach
       const hasPotentialBreach = becPollingCall.data.NewRules.some((rule) =>
-        rule.MoveToFolder?.includes("RSS"),
-      );
+        rule.MoveToFolder?.includes('RSS')
+      )
       if (hasPotentialBreach) {
-        return "Potential Breach found. The rules for this user contain classic signs of a breach.";
+        return 'Potential Breach found. The rules for this user contain classic signs of a breach.'
       }
-      const recentCount = becPollingCall.data.NewRules.filter((rule) => rule.RecentlyChanged).length;
+      const recentCount = becPollingCall.data.NewRules.filter((rule) => rule.RecentlyChanged).length
       if (recentCount > 0) {
-        return `Rules have been found, ${recentCount} of which were created or changed in the last 7 days. Please review the list below and take action as needed.`;
+        return `Rules have been found, ${recentCount} of which were created or changed in the last 7 days. Please review the list below and take action as needed.`
       }
-      return "Rules have been found. Please review the list below and take action as needed.";
+      return 'Rules have been found. Please review the list below and take action as needed.'
     }
     if (becPollingCall.data.InboxRuleChanges && becPollingCall.data.InboxRuleChanges.length > 0) {
-      return "No rules currently exist on the mailbox, but rules were created, changed or removed in the last 7 days. Please review the changes below.";
+      return 'No rules currently exist on the mailbox, but rules were created, changed or removed in the last 7 days. Please review the changes below.'
     }
-    return "No new rules found.";
-  };
+    return 'No new rules found.'
+  }
 
   const getUserMessage = () => {
-    if (!becPollingCall.data) return null;
+    if (!becPollingCall.data) return null
     if (becPollingCall.data.NewUsers && becPollingCall.data.NewUsers.length > 0) {
-      return "New users have been found in the last 14 days. Please review the list below and take action as needed.";
+      return 'New users have been found in the last 14 days. Please review the list below and take action as needed.'
     }
-    return "No new users found.";
-  };
+    return 'No new users found.'
+  }
 
   const getAppMessage = () => {
-    if (!becPollingCall.data) return null;
+    if (!becPollingCall.data) return null
     if (becPollingCall.data.AddedApps && becPollingCall.data.AddedApps.length > 0) {
       // Example condition to check for potential breach
       const hasPotentialBreach = becPollingCall.data.AddedApps.some(
-        (app) => /* your condition here */ false,
-      );
+        (app) => /* your condition here */ false
+      )
       if (hasPotentialBreach) {
-        return "Potential Breach found.";
+        return 'Potential Breach found.'
       }
-      return "New applications have been found. Please review the list below and take action as needed.";
+      return 'New applications have been found. Please review the list below and take action as needed.'
     }
-    return "No new applications found.";
-  };
+    return 'No new applications found.'
+  }
 
   const getMailboxPermissionMessage = () => {
-    if (!becPollingCall.data) return null;
+    if (!becPollingCall.data) return null
     if (
       becPollingCall.data.MailboxPermissionChanges &&
       becPollingCall.data.MailboxPermissionChanges.length > 0
     ) {
-      return "Mailbox permission changes have been found.";
+      return 'Mailbox permission changes have been found.'
     }
-    return "No mailbox permission changes found.";
-  };
+    return 'No mailbox permission changes found.'
+  }
 
   const getSentMessagesMessage = () => {
-    if (!becPollingCall.data) return null;
+    if (!becPollingCall.data) return null
     if (becPollingCall.data.SentMessages && becPollingCall.data.SentMessages.length > 0) {
-      return "Sent messages have been found. Please review the list below for any suspicious activity.";
+      return 'Sent messages have been found. Please review the list below for any suspicious activity.'
     }
-    return "No sent messages found in the specified time range.";
-  };
+    return 'No sent messages found in the specified time range.'
+  }
+
+  const getSafelistMessage = () => {
+    if (!becPollingCall.data) return null
+    const trustedCount = becPollingCall.data.TrustedSenders?.length || 0
+    const blockedCount = becPollingCall.data.BlockedSenders?.length || 0
+    const changeCount = becPollingCall.data.SafelistChanges?.length || 0
+    if (changeCount > 0) {
+      return `Trusted/Blocked senders list was changed ${changeCount} time(s) in the last 7 days. Please review the changes below.`
+    }
+    if (trustedCount > 0 || blockedCount > 0) {
+      return `${trustedCount} trusted and ${blockedCount} blocked sender/domain entries found. Please review the list below.`
+    }
+    return 'No trusted or blocked senders/domains found.'
+  }
+
+  const formatSafelistValue = (value) => {
+    if (!value) return 'unchanged'
+    return Array.isArray(value) ? value.join(', ') || 'unchanged' : String(value)
+  }
 
   const subtitle = userRequest.isSuccess
     ? [
@@ -181,7 +200,7 @@ const Page = () => {
           ),
         },
         {
-          icon: <Launch style={{ color: "#667085" }} />,
+          icon: <Launch style={{ color: '#667085' }} />,
           text: (
             <Button
               color="muted"
@@ -196,12 +215,12 @@ const Page = () => {
           ),
         },
       ]
-    : [];
+    : []
 
   return (
     <HeaderedTabbedLayout
       tabOptions={tabOptions}
-      title={userRequest.isSuccess ? userRequest.data?.[0]?.displayName : ""}
+      title={userRequest.isSuccess ? userRequest.data?.[0]?.displayName : ''}
       subtitle={subtitle}
       isFetching={userRequest.isFetching}
     >
@@ -231,7 +250,7 @@ const Page = () => {
                 variant="outlined"
                 isFetching={false}
                 title={
-                  <Stack direction="row" justifyContent={"space-between"}>
+                  <Stack direction="row" justifyContent={'space-between'}>
                     <Box>Loading data</Box>
                     <CircularProgress size={20} />
                   </Stack>
@@ -273,7 +292,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Log information</Box>
                       <Stack direction="row" spacing={2}>
                         <SvgIcon color="success">
@@ -284,7 +303,7 @@ const Page = () => {
                   }
                 >
                   <Typography variant="body2" gutterBottom>
-                    {becPollingCall.data?.ExtractResult}. The data of this log was extracted at{" "}
+                    {becPollingCall.data?.ExtractResult}. The data of this log was extracted at{' '}
                     {new Date(becPollingCall.data?.ExtractedAt).toLocaleString()}. This data might
                     be cached. To get the latest version of the data, click the Refresh Data button.
                   </Typography>
@@ -303,7 +322,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 1: Mailbox Rules</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -333,7 +352,7 @@ const Page = () => {
                           {[...becPollingCall.data.NewRules]
                             .sort(
                               (a, b) =>
-                                (b?.RecentlyChanged === true) - (a?.RecentlyChanged === true),
+                                (b?.RecentlyChanged === true) - (a?.RecentlyChanged === true)
                             )
                             .map((rule, index) => (
                               <PropertyListItem
@@ -362,7 +381,7 @@ const Page = () => {
                               key={index}
                               label={`${change?.Operation} - ${change?.RuleName}`}
                               value={`${change?.Date} by ${change?.UserKey}${
-                                change?.Parameters ? ` | ${change.Parameters}` : ""
+                                change?.Parameters ? ` | ${change.Parameters}` : ''
                               }`}
                             />
                           ))}
@@ -376,7 +395,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 2: Recently added users</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -420,7 +439,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 3: New Applications</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -464,7 +483,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 4: Mailbox permission changes</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -508,7 +527,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 5: Sent Messages</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -551,7 +570,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 6: MFA Devices</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -582,7 +601,7 @@ const Page = () => {
                           {becPollingCall.data.MFADevices.map((permission, index) => (
                             <PropertyListItem
                               key={index}
-                              label={permission["@odata.type"]}
+                              label={permission['@odata.type']}
                               value={`${permission?.displayName} - Registered at ${permission?.createdDateTime}`}
                             />
                           ))}
@@ -595,7 +614,7 @@ const Page = () => {
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Check 7: Password Changes</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
@@ -634,12 +653,89 @@ const Page = () => {
                     )}
                 </CippButtonCard>
 
-                {/* Check 8: Report Data */}
+                {/* Check 8: Trusted & Blocked Senders */}
                 <CippButtonCard
                   variant="outlined"
                   isFetching={false}
                   title={
-                    <Stack direction="row" justifyContent={"space-between"}>
+                    <Stack direction="row" justifyContent={'space-between'}>
+                      <Box>Check 8: Trusted &amp; Blocked Senders</Box>
+                      <Stack direction="row" spacing={2}>
+                        {becPollingCall.data &&
+                        (becPollingCall.data.TrustedSenders?.length > 0 ||
+                          becPollingCall.data.BlockedSenders?.length > 0 ||
+                          becPollingCall.data.SafelistChanges?.length > 0) ? (
+                          <SvgIcon color="success">
+                            <CheckCircle />
+                          </SvgIcon>
+                        ) : (
+                          <SvgIcon color="disabled">
+                            <CheckCircle />
+                          </SvgIcon>
+                        )}
+                      </Stack>
+                    </Stack>
+                  }
+                >
+                  <Typography variant="body2" gutterBottom>
+                    {getSafelistMessage()}
+                  </Typography>
+                  {becPollingCall.data &&
+                    becPollingCall.data.TrustedSenders &&
+                    becPollingCall.data.TrustedSenders.length > 0 && (
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Trusted senders/domains
+                        </Typography>
+                        <PropertyList>
+                          {becPollingCall.data.TrustedSenders.map((sender, index) => (
+                            <PropertyListItem key={index} label={sender} value="Trusted" />
+                          ))}
+                        </PropertyList>
+                      </Box>
+                    )}
+                  {becPollingCall.data &&
+                    becPollingCall.data.BlockedSenders &&
+                    becPollingCall.data.BlockedSenders.length > 0 && (
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Blocked senders/domains
+                        </Typography>
+                        <PropertyList>
+                          {becPollingCall.data.BlockedSenders.map((sender, index) => (
+                            <PropertyListItem key={index} label={sender} value="Blocked" />
+                          ))}
+                        </PropertyList>
+                      </Box>
+                    )}
+                  {becPollingCall.data &&
+                    becPollingCall.data.SafelistChanges &&
+                    becPollingCall.data.SafelistChanges.length > 0 && (
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Changes in the last 7 days
+                        </Typography>
+                        <PropertyList>
+                          {becPollingCall.data.SafelistChanges.map((change, index) => (
+                            <PropertyListItem
+                              key={index}
+                              label={`${change?.Operation} by ${change?.UserKey}`}
+                              value={`${change?.Date} | Trusted: ${formatSafelistValue(
+                                change?.Trusted
+                              )} | Blocked: ${formatSafelistValue(change?.Blocked)}`}
+                            />
+                          ))}
+                        </PropertyList>
+                      </Box>
+                    )}
+                </CippButtonCard>
+
+                {/* Check 9: Report Data */}
+                <CippButtonCard
+                  variant="outlined"
+                  isFetching={false}
+                  title={
+                    <Stack direction="row" justifyContent={'space-between'}>
                       <Box>Report</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data ? (
@@ -672,14 +768,14 @@ const Page = () => {
                         <Button
                           onClick={() => {
                             const blob = new Blob([JSON.stringify(becPollingCall.data, null, 2)], {
-                              type: "application/json",
-                            });
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement("a");
-                            link.href = url;
-                            link.download = `BEC_Report_${userRequest.data[0].userPrincipalName}.json`;
-                            link.click();
-                            URL.revokeObjectURL(url);
+                              type: 'application/json',
+                            })
+                            const url = URL.createObjectURL(blob)
+                            const link = document.createElement('a')
+                            link.href = url
+                            link.download = `BEC_Report_${userRequest.data[0].userPrincipalName}.json`
+                            link.click()
+                            URL.revokeObjectURL(url)
                           }}
                           variant="outlined"
                           startIcon={
@@ -700,9 +796,9 @@ const Page = () => {
         </Box>
       )}
     </HeaderedTabbedLayout>
-  );
-};
+  )
+}
 
-Page.getLayout = (page) => <DashboardLayout>{page}</DashboardLayout>;
+Page.getLayout = (page) => <DashboardLayout>{page}</DashboardLayout>
 
-export default Page;
+export default Page
