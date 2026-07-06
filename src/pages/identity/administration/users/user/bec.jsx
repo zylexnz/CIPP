@@ -108,7 +108,14 @@ const Page = () => {
       if (hasPotentialBreach) {
         return "Potential Breach found. The rules for this user contain classic signs of a breach.";
       }
+      const recentCount = becPollingCall.data.NewRules.filter((rule) => rule.RecentlyChanged).length;
+      if (recentCount > 0) {
+        return `Rules have been found, ${recentCount} of which were created or changed in the last 7 days. Please review the list below and take action as needed.`;
+      }
       return "Rules have been found. Please review the list below and take action as needed.";
+    }
+    if (becPollingCall.data.InboxRuleChanges && becPollingCall.data.InboxRuleChanges.length > 0) {
+      return "No rules currently exist on the mailbox, but rules were created, changed or removed in the last 7 days. Please review the changes below.";
     }
     return "No new rules found.";
   };
@@ -300,8 +307,8 @@ const Page = () => {
                       <Box>Check 1: Mailbox Rules</Box>
                       <Stack direction="row" spacing={2}>
                         {becPollingCall.data &&
-                        becPollingCall.data.NewRules &&
-                        becPollingCall.data.NewRules.length > 0 ? (
+                        (becPollingCall.data.NewRules?.length > 0 ||
+                          becPollingCall.data.InboxRuleChanges?.length > 0) ? (
                           <SvgIcon color="success">
                             <CheckCircle />
                           </SvgIcon>
@@ -323,11 +330,40 @@ const Page = () => {
                     becPollingCall.data.NewRules.length > 0 && (
                       <Box mt={2}>
                         <PropertyList>
-                          {becPollingCall.data.NewRules.map((rule, index) => (
+                          {[...becPollingCall.data.NewRules]
+                            .sort(
+                              (a, b) =>
+                                (b?.RecentlyChanged === true) - (a?.RecentlyChanged === true),
+                            )
+                            .map((rule, index) => (
+                              <PropertyListItem
+                                key={index}
+                                label={
+                                  rule?.RecentlyChanged
+                                    ? `${rule?.Name} - changed in last 7 days`
+                                    : rule?.Name
+                                }
+                                value={rule?.Description}
+                              />
+                            ))}
+                        </PropertyList>
+                      </Box>
+                    )}
+                  {becPollingCall.data &&
+                    becPollingCall.data.InboxRuleChanges &&
+                    becPollingCall.data.InboxRuleChanges.length > 0 && (
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Rule changes in the last 7 days
+                        </Typography>
+                        <PropertyList>
+                          {becPollingCall.data.InboxRuleChanges.map((change, index) => (
                             <PropertyListItem
                               key={index}
-                              label={rule?.Name}
-                              value={rule?.Description}
+                              label={`${change?.Operation} - ${change?.RuleName}`}
+                              value={`${change?.Date} by ${change?.UserKey}${
+                                change?.Parameters ? ` | ${change.Parameters}` : ""
+                              }`}
                             />
                           ))}
                         </PropertyList>
