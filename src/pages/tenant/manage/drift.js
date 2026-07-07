@@ -186,6 +186,11 @@ const ManageDriftPage = () => {
       if (item.deniedDeviations && Array.isArray(item.deniedDeviations)) {
         acc.deniedDeviationsList.push(...item.deniedDeviations.filter((dev) => dev !== null))
       }
+      if (item.licenseMissingDeviations && Array.isArray(item.licenseMissingDeviations)) {
+        acc.licenseMissingDeviationsList.push(
+          ...item.licenseMissingDeviations.filter((dev) => dev !== null)
+        )
+      }
 
       // Extract compliant standards from ComparisonDetails in driftSettings
       if (
@@ -301,6 +306,7 @@ const ManageDriftPage = () => {
       acceptedDeviations: [],
       customerSpecificDeviationsList: [],
       deniedDeviationsList: [],
+      licenseMissingDeviationsList: [],
       alignedStandards: [],
       latestDataCollection: null,
     }
@@ -1134,9 +1140,16 @@ const ManageDriftPage = () => {
     'denied'
   )
   const alignedStandardItems = createDeviationItems(processedDriftData.alignedStandards, 'aligned')
+  const licenseMissingDeviationItems = createDeviationItems(
+    processedDriftData.licenseMissingDeviationsList,
+    'skipped'
+  )
 
   // Separate items by their actual status
-  const licenseSkippedItems = deviationItems.filter((item) => item.isLicenseSkipped)
+  const licenseSkippedItems = [
+    ...licenseMissingDeviationItems,
+    ...deviationItems.filter((item) => item.isLicenseSkipped),
+  ]
   const compliantFromDeviations = deviationItems.filter((item) => item.isActuallyCompliant)
   const actualDeviationItems = deviationItems.filter(
     (item) => !item.isLicenseSkipped && !item.isActuallyCompliant
