@@ -185,7 +185,7 @@ const Page = () => {
                   'publisher',
                   'platform',
                   'version',
-                  'deviceCount',
+                  'managedDevices',
                 ]}
               />
             </Grid>

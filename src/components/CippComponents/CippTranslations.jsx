@@ -7,6 +7,7 @@ export const CippTranslations = {
   activeUsersLast7Days: 'Active Users (7 Days)',
   firstConsentedDateTime: 'First Consented',
   deviceCount: 'Devices',
+  managedDevices: 'Devices',
   displayName: 'Display Name',
   mail: 'Mail',
   mobilePhone: 'Mobile Phone',
