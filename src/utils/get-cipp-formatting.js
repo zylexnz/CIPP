@@ -139,6 +139,33 @@ export const getCippFormatting = (data, cellName, type, canReceive, flatten = tr
     return <Chip variant="outlined" label={label} size="small" color={color} />
   }
 
+  // Hex color values (a sensitivity label's custom color, content-marking font colors, ...) render
+  // as a swatch chip. Matches any column named Color or *Color, guarded on the value shape so
+  // non-hex data in a matching column falls through untouched.
+  if (cellNameLower.endsWith('color') && typeof data === 'string' && /^#[0-9A-Fa-f]{6}$/.test(data)) {
+    return isText ? (
+      data
+    ) : (
+      <Chip
+        variant="outlined"
+        size="small"
+        label={data.toUpperCase()}
+        icon={
+          <Box
+            component="span"
+            sx={{
+              width: 14,
+              height: 14,
+              borderRadius: '50%',
+              backgroundColor: data,
+              border: '1px solid rgba(0, 0, 0, 0.2)',
+            }}
+          />
+        }
+      />
+    )
+  }
+
   //if the cellName starts with portal_, return text, or a link with an icon
   if (cellName.startsWith('portal_')) {
     const IconComponent = portalIcons[cellName]

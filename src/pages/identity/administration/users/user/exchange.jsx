@@ -197,7 +197,7 @@ const Page = () => {
   const aliasApiConfig = {
     type: "POST",
     url: "/api/EditUserAliases",
-    relatedQueryKeys: `ListUsers-${userId}`,
+    relatedQueryKeys: [`ListUsers-${userId}`, `Mailbox-${userId}`],
     confirmText: "Add the specified proxy addresses to this user?",
     customDataformatter: (row, action, formData) => {
       return {
@@ -1259,8 +1259,8 @@ const Page = () => {
       },
       confirmText: "Are you sure you want to make this the primary proxy address?",
       multiPost: false,
-      relatedQueryKeys: `ListUsers-${userId}`,
-      condition: (row) => row && row.Type !== "Primary",
+      relatedQueryKeys: [`ListUsers-${userId}`, `Mailbox-${userId}`],
+      condition: (row) => row && row.Type === "Alias",
     },
     {
       label: "Remove Proxy Address",
@@ -1274,10 +1274,53 @@ const Page = () => {
       },
       confirmText: "Are you sure you want to remove this proxy address?",
       multiPost: false,
-      relatedQueryKeys: `ListUsers-${userId}`,
-      condition: (row) => row && row.Type !== "Primary",
+      relatedQueryKeys: [`ListUsers-${userId}`, `Mailbox-${userId}`],
+      condition: (row) => row && row.Type === "Alias",
     },
   ];
+
+  // Merge Entra ID proxyAddresses (fast, primary source) with the mailbox EmailAddresses
+  // from Exchange so forward-sync drift between the two directories is visible.
+  const graphProxyAddresses = (graphUserRequest.data?.[0]?.proxyAddresses || []).filter(
+    (address) => typeof address === "string",
+  );
+  // Mailbox serializes as an array with one element
+  const mailboxDetails = [].concat(userRequest.data?.[0]?.Mailbox || [])[0];
+  const exchangeProxyAddresses = []
+    .concat(mailboxDetails?.EmailAddresses || [])
+    .filter((address) => typeof address === "string");
+  // Only assess sync when Exchange returned addresses; a mailbox always has at least a primary
+  const exchangeAddressesLoaded = userRequest.isSuccess && exchangeProxyAddresses.length > 0;
+  const proxyAddressType = (address) =>
+    address.startsWith("SMTP:") ? "Primary" : address.startsWith("smtp:") ? "Alias" : address.split(":")[0];
+  const proxyAddressRows = (() => {
+    const rows = new Map();
+    graphProxyAddresses.forEach((address) => {
+      rows.set(address.toLowerCase(), { Address: address, inGraph: true, inExchange: false });
+    });
+    exchangeProxyAddresses.forEach((address) => {
+      const existing = rows.get(address.toLowerCase());
+      if (existing) {
+        existing.inExchange = true;
+      } else {
+        rows.set(address.toLowerCase(), { Address: address, inGraph: false, inExchange: true });
+      }
+    });
+    return [...rows.values()].map((row) => ({
+      Address: row.Address,
+      Type: proxyAddressType(row.Address),
+      Source: !exchangeAddressesLoaded
+        ? "Checking"
+        : row.inGraph && row.inExchange
+          ? "Entra ID & Exchange"
+          : row.inGraph
+            ? "Entra ID only"
+            : "Exchange only",
+    }));
+  })();
+  const mismatchedAddresses = exchangeAddressesLoaded
+    ? proxyAddressRows.filter((row) => row.Source !== "Entra ID & Exchange")
+    : [];
 
   const proxyAddressesCard = [
     {
@@ -1285,7 +1328,7 @@ const Page = () => {
       cardLabelBox: {
         cardLabelBoxHeader: graphUserRequest.isFetching ? (
           <CircularProgress size="25px" color="inherit" />
-        ) : graphUserRequest.data?.[0]?.proxyAddresses?.length > 1 ? (
+        ) : mismatchedAddresses.length === 0 && graphUserRequest.data?.[0]?.proxyAddresses?.length > 1 ? (
           <Check />
         ) : (
           <Error />
@@ -1293,9 +1336,11 @@ const Page = () => {
       },
       text: "Proxy Addresses",
       subtext:
-        graphUserRequest.data?.[0]?.proxyAddresses?.length > 1
-          ? "Proxy addresses are configured for this user"
-          : "No proxy addresses configured for this user",
+        mismatchedAddresses.length > 0
+          ? `${mismatchedAddresses.length} address(es) only exist in one of Entra ID or Exchange - Microsoft may still be propagating recent changes`
+          : graphUserRequest.data?.[0]?.proxyAddresses?.length > 1
+            ? "Proxy addresses are configured for this user"
+            : "No proxy addresses configured for this user",
       statusColor: "green.main",
       cardLabelBoxActions: (
         <Button
@@ -1311,14 +1356,13 @@ const Page = () => {
       table: {
         title: "Proxy Addresses",
         hideTitle: true,
-        data:
-          graphUserRequest.data?.[0]?.proxyAddresses?.map((address) => ({
-            Address: address,
-            Type: typeof address === "string" && address.startsWith("SMTP:") ? "Primary" : "Alias",
-          })) || [],
-        refreshFunction: () => graphUserRequest.refetch(),
+        data: proxyAddressRows,
+        refreshFunction: () => {
+          graphUserRequest.refetch();
+          userRequest.refetch();
+        },
         isFetching: graphUserRequest.isFetching,
-        simpleColumns: ["Address", "Type"],
+        simpleColumns: ["Address", "Type", "Source"],
         actions: proxyAddressActions,
         offCanvas: {
           children: (data) => {
@@ -1334,6 +1378,10 @@ const Page = () => {
                   {
                     label: "Type",
                     value: data.Type,
+                  },
+                  {
+                    label: "Source",
+                    value: data.Source,
                   },
                 ]}
                 actionItems={proxyAddressActions}
