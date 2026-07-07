@@ -12,6 +12,7 @@ import { ApiGetCall } from '../../../api/ApiCall'
 import { useSettings } from '../../../hooks/use-settings'
 import {
   Alert,
+  Box,
   Button,
   Chip,
   Container,
@@ -91,6 +92,33 @@ const AiToolDetail = ({ row }) => {
           color={row.status === 'Sanctioned' ? 'success' : 'warning'}
         />
       </Stack>
+      {row.toolDescription && (
+        <Typography variant="body2" color="text.secondary">
+          {row.toolDescription}
+        </Typography>
+      )}
+      {row.riskReason && (
+        <Box
+          sx={{
+            p: 1.5,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderLeft: '4px solid',
+            borderLeftColor: (() => {
+              const color = riskChipColor(row.catalogRisk ?? row.risk)
+              return color === 'default' ? 'divider' : `${color}.main`
+            })(),
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Why {row.aiTool} is rated {row.catalogRisk ?? row.risk} risk
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {row.riskReason}
+          </Typography>
+        </Box>
+      )}
       {row.status === 'Sanctioned' ? (
         <Alert severity="success">
           This tool is marked as company sanctioned for this tenant, so it reports the Informational
