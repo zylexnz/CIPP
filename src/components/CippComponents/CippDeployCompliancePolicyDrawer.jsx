@@ -290,7 +290,7 @@ export const CippDeployCompliancePolicyDrawer = ({
                 label="Label Color (optional)"
                 name="labelColor"
                 formControl={formControl}
-                helperText="Custom label color, applied via the 'color' advanced setting. The compliance portal only offers preset colors; this supports any hex color. Leave empty to keep the color from the JSON below."
+                helperText="Custom label color, applied via the 'color' advanced setting. The Purview portal only offers preset colors; this supports any hex color. Leave empty to keep the color from the JSON below."
               />
             </Grid>
           )}
