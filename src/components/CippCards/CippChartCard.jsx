@@ -92,6 +92,7 @@ export const CippChartCard = ({
   chartType = "donut",
   title,
   actions,
+  headerAction,
   onClick,
   totalLabel = "Total",
   customTotal,
@@ -128,7 +129,9 @@ export const CippChartCard = ({
     >
       <CardHeader
         action={
-          actions ? (
+          headerAction ? (
+            headerAction
+          ) : actions ? (
             <ActionsMenu
               color="inherit"
               actions={actions}
