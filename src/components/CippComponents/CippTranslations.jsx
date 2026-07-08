@@ -1,5 +1,9 @@
 export const CippTranslations = {
   userPrincipalName: 'User Principal Name',
+  aadRegistered: 'Microsoft Entra Registered',
+  azureADRegistered: 'Microsoft Entra Registered',
+  azureActiveDirectoryDeviceId: 'Microsoft Entra Device ID',
+  azureADDeviceId: 'Microsoft Entra Device ID',
   aiTool: 'AI Tool',
   applicationId: 'Application ID',
   signInsLast7Days: 'Sign-ins (7 Days)',
@@ -47,7 +51,7 @@ export const CippTranslations = {
   portal_azure: 'Azure',
   portal_intune: 'Intune',
   portal_security: 'Security',
-  portal_compliance: 'Compliance',
+  portal_compliance: 'Purview',
   portal_sharepoint: 'SharePoint',
   portal_platform: 'Power Platform',
   portal_bi: 'Power BI',

@@ -139,6 +139,27 @@ export const getCippFormatting = (data, cellName, type, canReceive, flatten = tr
     return <Chip variant="outlined" label={label} size="small" color={color} />
   }
 
+  // Microsoft Entra device trust type (Graph device.trustType)
+  if (cellName === 'trustType' && typeof data === 'string' && data) {
+    const trustTypeMap = {
+      workplace: 'Microsoft Entra registered',
+      azuread: 'Microsoft Entra joined',
+      serverad: 'Microsoft Entra hybrid joined',
+    }
+    return trustTypeMap[data.toLowerCase()] ?? data
+  }
+
+  // Microsoft Entra device join type (Intune managedDevice.joinType)
+  if (cellName === 'joinType' && typeof data === 'string' && data) {
+    const joinTypeMap = {
+      azureadregistered: 'Microsoft Entra registered',
+      azureadjoined: 'Microsoft Entra joined',
+      hybridazureadjoined: 'Microsoft Entra hybrid joined',
+      unknown: 'Unknown',
+    }
+    return joinTypeMap[data.toLowerCase()] ?? data
+  }
+
   // Hex color values (a sensitivity label's custom color, content-marking font colors, ...) render
   // as a swatch chip. Matches any column named Color or *Color, guarded on the value shape so
   // non-hex data in a matching column falls through untouched.

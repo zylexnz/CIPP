@@ -43,7 +43,7 @@ const Page = () => {
         },
       ],
       confirmText:
-        'Pick a custom color for this sensitivity label. This supports any hex color, beyond the preset palette available in the compliance portal. Leave empty to clear the custom color.',
+        'Pick a custom color for this sensitivity label. This supports any hex color, beyond the preset palette available in the Purview portal. Leave empty to clear the custom color.',
       hideBulk: true,
     },
     {
