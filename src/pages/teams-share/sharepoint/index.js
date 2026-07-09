@@ -11,6 +11,7 @@ import {
   Delete,
   CleaningServices,
   Assessment,
+  FolderShared,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { Stack } from '@mui/system'
@@ -295,6 +296,124 @@ const Page = () => {
           },
         },
       ],
+      multiPost: false,
+    },
+    {
+      label: 'Set Library Permission',
+      type: 'POST',
+      icon: <FolderShared />,
+      url: '/api/ExecSetLibraryPermission',
+      confirmText:
+        'Grant users or groups a permission level on a document library of [displayName].',
+      children: ({ formHook, row }) => {
+        const siteRow = Array.isArray(row) ? row[0] : row
+        return (
+          <>
+            <CippFormComponent
+              type="autoComplete"
+              name="library"
+              label="Document Library"
+              multiple={false}
+              creatable={false}
+              formControl={formHook}
+              validators={{ required: 'Please select a document library' }}
+              api={{
+                url: '/api/ListSiteLibraries',
+                data: {
+                  SiteId: siteRow?.siteId,
+                  SiteUrl: siteRow?.webUrl,
+                  tenantFilter: siteRow?.Tenant ?? tenantFilter,
+                },
+                queryKey: `SiteLibraries-${siteRow?.siteId}`,
+                dataKey: 'Results',
+                labelField: (library) => library.Title,
+                valueField: 'Id',
+                showRefresh: true,
+              }}
+            />
+            <CippFormComponent
+              type="autoComplete"
+              name="users"
+              label="Users"
+              multiple={true}
+              creatable={false}
+              formControl={formHook}
+              api={{
+                url: '/api/ListGraphRequest',
+                data: {
+                  Endpoint: 'users',
+                  $select: 'id,displayName,userPrincipalName',
+                  $top: 999,
+                  $count: true,
+                },
+                queryKey: 'ListUsersAutoComplete',
+                dataKey: 'Results',
+                labelField: (user) => `${user.displayName} (${user.userPrincipalName})`,
+                valueField: 'userPrincipalName',
+                addedField: {
+                  id: 'id',
+                },
+                showRefresh: true,
+              }}
+            />
+            <CippFormComponent
+              type="autoComplete"
+              name="groups"
+              label="Groups"
+              multiple={true}
+              creatable={false}
+              formControl={formHook}
+              api={{
+                url: '/api/ListGraphRequest',
+                data: {
+                  Endpoint: 'groups',
+                  $select: 'id,displayName,mail,securityEnabled,groupTypes',
+                  $top: 999,
+                  $count: true,
+                },
+                queryKey: 'ListGroupsAutoComplete',
+                dataKey: 'Results',
+                labelField: (group) =>
+                  group.mail ? `${group.displayName} (${group.mail})` : group.displayName,
+                valueField: 'id',
+                addedField: {
+                  securityEnabled: 'securityEnabled',
+                  groupTypes: 'groupTypes',
+                },
+                showRefresh: true,
+              }}
+            />
+            <CippFormComponent
+              type="radio"
+              name="PermissionLevel"
+              label="Permission Level"
+              formControl={formHook}
+              options={[
+                { label: 'Read', value: 'read' },
+                { label: 'Contribute', value: 'contribute' },
+                { label: 'Edit', value: 'edit' },
+                { label: 'Design', value: 'design' },
+                { label: 'Full Control', value: 'fullControl' },
+              ]}
+            />
+          </>
+        )
+      },
+      defaultvalues: {
+        PermissionLevel: 'read',
+      },
+      customDataformatter: (row, action, formData) => {
+        const siteRow = Array.isArray(row) ? row[0] : row
+        return {
+          tenantFilter: siteRow.Tenant ?? tenantFilter,
+          SiteUrl: siteRow.webUrl,
+          ListId: formData.library?.value,
+          LibraryName: formData.library?.label,
+          PermissionLevel: formData.PermissionLevel,
+          Users: formData.users ?? [],
+          Groups: formData.groups ?? [],
+        }
+      },
       multiPost: false,
     },
     {
