@@ -1,8 +1,8 @@
-import { Box, FormControlLabel, Stack, Switch } from "@mui/material";
-import { useEffect } from "react";
-import CippFormComponent from "./CippFormComponent";
-import { useWatch } from "react-hook-form";
-import { GroupHeader, GroupItems } from "./CippAutocompleteGrouping";
+import { Box, FormControlLabel, Stack, Switch } from '@mui/material'
+import { useEffect } from 'react'
+import CippFormComponent from './CippFormComponent'
+import { useWatch } from 'react-hook-form'
+import { GroupHeader, GroupItems } from './CippAutocompleteGrouping'
 
 const CippMailboxPermissionsDialog = ({
   formHook,
@@ -14,13 +14,13 @@ const CippMailboxPermissionsDialog = ({
 }) => {
   const fullAccess = useWatch({
     control: formHook.control,
-    name: "permissions.AddFullAccess",
-  });
+    name: 'permissions.AddFullAccess',
+  })
 
   // Set the default AutoMap value when component mounts
   useEffect(() => {
-    formHook.setValue("permissions.AutoMap", defaultAutoMap);
-  }, [formHook, defaultAutoMap]);
+    formHook.setValue('permissions.AutoMap', defaultAutoMap)
+  }, [formHook, defaultAutoMap])
 
   return (
     <Stack spacing={2} sx={{ mt: 1 }}>
@@ -98,7 +98,7 @@ const CippMailboxPermissionsDialog = ({
         />
       </Box>
     </Stack>
-  );
-};
+  )
+}
 
-export default CippMailboxPermissionsDialog;
+export default CippMailboxPermissionsDialog

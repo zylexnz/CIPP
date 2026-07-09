@@ -1,8 +1,8 @@
-import { useEffect } from "react";
-import { Box, FormControlLabel, Stack, Switch, Tooltip } from "@mui/material";
-import CippFormComponent from "./CippFormComponent";
-import { useWatch } from "react-hook-form";
-import { GroupHeader, GroupItems } from "./CippAutocompleteGrouping";
+import { useEffect } from 'react'
+import { Box, FormControlLabel, Stack, Switch, Tooltip } from '@mui/material'
+import CippFormComponent from './CippFormComponent'
+import { useWatch } from 'react-hook-form'
+import { GroupHeader, GroupItems } from './CippAutocompleteGrouping'
 
 const CippContactPermissionsDialog = ({
   formHook,
@@ -13,17 +13,17 @@ const CippContactPermissionsDialog = ({
 }) => {
   const permissionLevel = useWatch({
     control: formHook.control,
-    name: "Permissions",
-  });
+    name: 'Permissions',
+  })
 
   // default SendNotificationToUser to false on mount
   useEffect(() => {
-    formHook.setValue("SendNotificationToUser", false);
-  }, [formHook]);
+    formHook.setValue('SendNotificationToUser', false)
+  }, [formHook])
 
   // Only certain permission levels support sending a notification when contact permissions are added
-  const notifyAllowed = ["AvailabilityOnly", "LimitedDetails", "Reviewer", "Editor"];
-  const isNotifyAllowed = notifyAllowed.includes(permissionLevel?.value ?? permissionLevel);
+  const notifyAllowed = ['AvailabilityOnly', 'LimitedDetails', 'Reviewer', 'Editor']
+  const isNotifyAllowed = notifyAllowed.includes(permissionLevel?.value ?? permissionLevel)
 
   return (
     <Stack spacing={3} sx={{ mt: 1 }}>
@@ -53,7 +53,7 @@ const CippContactPermissionsDialog = ({
             </li>
           )}
           creatable={false}
-          validators={{ required: "Select a user or group to assign permissions to" }}
+          validators={{ required: 'Select a user or group to assign permissions to' }}
           placeholder="Select a user or group to assign permissions to"
         />
       </Box>
@@ -64,20 +64,20 @@ const CippContactPermissionsDialog = ({
           name="Permissions"
           creatable={false}
           validators={{
-            validate: (value) => (value ? true : "Select the permission level for the contact"),
+            validate: (value) => (value ? true : 'Select the permission level for the contact'),
           }}
           options={[
-            { value: "Author", label: "Author" },
-            { value: "Contributor", label: "Contributor" },
-            { value: "Editor", label: "Editor" },
-            { value: "Owner", label: "Owner" },
-            { value: "NonEditingAuthor", label: "Non Editing Author" },
-            { value: "PublishingAuthor", label: "Publishing Author" },
-            { value: "PublishingEditor", label: "Publishing Editor" },
-            { value: "Reviewer", label: "Reviewer" },
-            { value: "LimitedDetails", label: "Limited Details" },
-            { value: "AvailabilityOnly", label: "Availability Only" },
-            { value: "None", label: "None" },
+            { value: 'Author', label: 'Author' },
+            { value: 'Contributor', label: 'Contributor' },
+            { value: 'Editor', label: 'Editor' },
+            { value: 'Owner', label: 'Owner' },
+            { value: 'NonEditingAuthor', label: 'Non Editing Author' },
+            { value: 'PublishingAuthor', label: 'Publishing Author' },
+            { value: 'PublishingEditor', label: 'Publishing Editor' },
+            { value: 'Reviewer', label: 'Reviewer' },
+            { value: 'LimitedDetails', label: 'Limited Details' },
+            { value: 'AvailabilityOnly', label: 'Availability Only' },
+            { value: 'None', label: 'None' },
           ]}
           multiple={false}
           formControl={formHook}
@@ -88,8 +88,8 @@ const CippContactPermissionsDialog = ({
         <Tooltip
           title={
             !isNotifyAllowed
-              ? `Send notification is only supported for: ${notifyAllowed.join(", ")}`
-              : ""
+              ? `Send notification is only supported for: ${notifyAllowed.join(', ')}`
+              : ''
           }
           followCursor
           placement="right"
@@ -107,7 +107,7 @@ const CippContactPermissionsDialog = ({
         </Tooltip>
       </Box>
     </Stack>
-  );
-};
+  )
+}
 
-export default CippContactPermissionsDialog;
+export default CippContactPermissionsDialog
