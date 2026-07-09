@@ -285,6 +285,11 @@ export const nativeMenuItems = [
             path: '/tenant/reports/graph-office-reports',
             permissions: ['Tenant.Reports.*'],
           },
+          {
+            title: 'Custom Test Report',
+            path: '/tenant/reports/custom-test-report',
+            permissions: ['Tenant.Reports.*'],
+          },
         ],
       },
       {
