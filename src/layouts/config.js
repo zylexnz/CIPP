@@ -697,6 +697,11 @@ export const nativeMenuItems = [
         permissions: ['Sharepoint.Admin.*'],
       },
       {
+        title: 'Sharing Report',
+        path: '/teams-share/sharing-report',
+        permissions: ['Sharepoint.Site.*'],
+      },
+      {
         title: 'Teams',
         permissions: ['Teams.Group.*'],
         items: [
