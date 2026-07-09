@@ -42,11 +42,25 @@ import CippMailboxPermissionsDialog from "../../../../../components/CippComponen
 import CippCalendarPermissionsDialog from "../../../../../components/CippComponents/CippCalendarPermissionsDialog";
 import CippContactPermissionsDialog from "../../../../../components/CippComponents/CippContactPermissionsDialog";
 
+const permissionOptionGroupOrder = {
+  "System Users": 0,
+  Users: 1,
+  "Mail-enabled Security Groups": 2,
+};
+
+const sortPermissionOptions = (options) =>
+  options.sort(
+    (a, b) =>
+      permissionOptionGroupOrder[a.group] - permissionOptionGroupOrder[b.group] ||
+      a.label.localeCompare(b.label),
+  );
+
 const Page = () => {
   const userSettingsDefaults = useSettings();
   const [waiting, setWaiting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [actionData, setActionData] = useState({ ready: false });
+  const [includeSecurityGroups, setIncludeSecurityGroups] = useState(false);
   const createDialog = useDialog();
   const aliasDialog = useDialog();
   const permissionsDialog = useDialog();
@@ -132,6 +146,7 @@ const Page = () => {
       $top: 999,
     },
     queryKey: `MailEnabledSecurityGroups-${userSettingsDefaults.currentTenant}`,
+    waiting: includeSecurityGroups,
   });
 
   const getPermissionInfo = (userIdentifier, groupsList) => {
@@ -316,6 +331,12 @@ const Page = () => {
   }, [permissionsDialog.open]);
 
   useEffect(() => {
+    if (!permissionsDialog.open && !calendarPermissionsDialog.open && !contactPermissionsDialog.open) {
+      setIncludeSecurityGroups(false);
+    }
+  }, [permissionsDialog.open, calendarPermissionsDialog.open, contactPermissionsDialog.open]);
+
+  useEffect(() => {
     if (oooRequest.isSuccess) {
       formControl.setValue("ooo.ExternalMessage", oooRequest.data?.ExternalMessage);
       formControl.setValue("ooo.InternalMessage", oooRequest.data?.InternalMessage);
@@ -396,24 +417,25 @@ const Page = () => {
           value: user.userPrincipalName,
           label: `${user.displayName} (${user.userPrincipalName})`,
           type: "user",
+          group: "Users",
         });
       });
     }
 
     // Add mail-enabled security groups
-    if (groupsList?.data?.Results) {
+    if (includeSecurityGroups && groupsList?.data?.Results) {
       groupsList.data.Results.forEach((group) => {
         options.push({
           value: group.mail,
           label: `${group.displayName} (${group.mail})`,
           type: "group",
+          group: "Mail-enabled Security Groups",
         });
       });
     }
 
-    // Sort alphabetically by label
-    return options.sort((a, b) => a.label.localeCompare(b.label));
-  }, [usersList?.data?.Results, groupsList?.data?.Results]);
+    return sortPermissionOptions(options);
+  }, [usersList?.data?.Results, groupsList?.data?.Results, includeSecurityGroups]);
 
   // Create options array for calendar permissions (includes system users)
   const calendarPermissionOptions = useMemo(() => {
@@ -424,6 +446,7 @@ const Page = () => {
       value: "Default",
       label: "Default",
       type: "system",
+      group: "System Users",
     });
 
     // Add users
@@ -433,28 +456,25 @@ const Page = () => {
           value: user.userPrincipalName,
           label: `${user.displayName} (${user.userPrincipalName})`,
           type: "user",
+          group: "Users",
         });
       });
     }
 
     // Add mail-enabled security groups
-    if (groupsList?.data?.Results) {
+    if (includeSecurityGroups && groupsList?.data?.Results) {
       groupsList.data.Results.forEach((group) => {
         options.push({
           value: group.mail,
           label: `${group.displayName} (${group.mail})`,
           type: "group",
+          group: "Mail-enabled Security Groups",
         });
       });
     }
 
-    // Sort alphabetically by label, but keep system users at the top
-    return options.sort((a, b) => {
-      if (a.type === "system" && b.type !== "system") return -1;
-      if (b.type === "system" && a.type !== "system") return 1;
-      return a.label.localeCompare(b.label);
-    });
-  }, [usersList?.data?.Results, groupsList?.data?.Results]);
+    return sortPermissionOptions(options);
+  }, [usersList?.data?.Results, groupsList?.data?.Results, includeSecurityGroups]);
 
   const contactPermissionOptions = useMemo(() => {
     const options = [];
@@ -464,6 +484,7 @@ const Page = () => {
       value: "Default",
       label: "Default",
       type: "system",
+      group: "System Users",
     });
 
     // Add users
@@ -473,30 +494,28 @@ const Page = () => {
           value: user.userPrincipalName,
           label: `${user.displayName} (${user.userPrincipalName})`,
           type: "user",
+          group: "Users",
         });
       });
     }
 
     // Add mail-enabled security groups
-    if (groupsList?.data?.Results) {
+    if (includeSecurityGroups && groupsList?.data?.Results) {
       groupsList.data.Results.forEach((group) => {
         options.push({
           value: group.mail,
           label: `${group.displayName} (${group.mail})`,
           type: "group",
+          group: "Mail-enabled Security Groups",
         });
       });
     }
 
-    // Sort alphabetically by label, but keep system users at the top
-    return options.sort((a, b) => {
-      if (a.type === "system" && b.type !== "system") return -1;
-      if (b.type === "system" && a.type !== "system") return 1;
-      return a.label.localeCompare(b.label);
-    });
-  }, [usersList?.data?.Results, groupsList?.data?.Results]);
+    return sortPermissionOptions(options);
+  }, [usersList?.data?.Results, groupsList?.data?.Results, includeSecurityGroups]);
 
-  const isUserGroupLoading = usersList.isFetching || groupsList.isFetching;
+  const isUserGroupLoading =
+    usersList.isFetching || (includeSecurityGroups && groupsList.isFetching);
 
   const subtitle = graphUserRequest.isSuccess
     ? [
@@ -1530,6 +1549,8 @@ const Page = () => {
             formHook={formHook}
             combinedOptions={mailboxPermissionOptions}
             isUserGroupLoading={isUserGroupLoading}
+            includeGroups={includeSecurityGroups}
+            onIncludeGroupsChange={setIncludeSecurityGroups}
             defaultAutoMap={true}
           />
         )}
@@ -1547,6 +1568,8 @@ const Page = () => {
             formHook={formHook}
             combinedOptions={calendarPermissionOptions}
             isUserGroupLoading={isUserGroupLoading}
+            includeGroups={includeSecurityGroups}
+            onIncludeGroupsChange={setIncludeSecurityGroups}
           />
         )}
       </CippApiDialog>
@@ -1563,6 +1586,8 @@ const Page = () => {
             formHook={formHook}
             combinedOptions={contactPermissionOptions}
             isUserGroupLoading={isUserGroupLoading}
+            includeGroups={includeSecurityGroups}
+            onIncludeGroupsChange={setIncludeSecurityGroups}
           />
         )}
       </CippApiDialog>

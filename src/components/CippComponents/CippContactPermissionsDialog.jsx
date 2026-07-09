@@ -1,9 +1,16 @@
 import { useEffect } from "react";
-import { Box, Stack, Tooltip } from "@mui/material";
+import { Box, FormControlLabel, Stack, Switch, Tooltip } from "@mui/material";
 import CippFormComponent from "./CippFormComponent";
 import { useWatch } from "react-hook-form";
+import { GroupHeader, GroupItems } from "./CippAutocompleteGrouping";
 
-const CippContactPermissionsDialog = ({ formHook, combinedOptions, isUserGroupLoading }) => {
+const CippContactPermissionsDialog = ({
+  formHook,
+  combinedOptions,
+  isUserGroupLoading,
+  includeGroups,
+  onIncludeGroupsChange,
+}) => {
   const permissionLevel = useWatch({
     control: formHook.control,
     name: "Permissions",
@@ -20,6 +27,15 @@ const CippContactPermissionsDialog = ({ formHook, combinedOptions, isUserGroupLo
 
   return (
     <Stack spacing={3} sx={{ mt: 1 }}>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={includeGroups}
+            onChange={(_, checked) => onIncludeGroupsChange(checked)}
+          />
+        }
+        label="Include mail-enabled security groups"
+      />
       <Box>
         <CippFormComponent
           type="autoComplete"
@@ -29,6 +45,13 @@ const CippContactPermissionsDialog = ({ formHook, combinedOptions, isUserGroupLo
           formControl={formHook}
           isFetching={isUserGroupLoading}
           options={combinedOptions}
+          groupBy={(option) => option.group}
+          renderGroup={(params) => (
+            <li key={params.key}>
+              <GroupHeader>{params.group}</GroupHeader>
+              <GroupItems>{params.children}</GroupItems>
+            </li>
+          )}
           creatable={false}
           validators={{ required: "Select a user or group to assign permissions to" }}
           placeholder="Select a user or group to assign permissions to"
