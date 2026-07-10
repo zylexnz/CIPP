@@ -984,6 +984,16 @@ export const useCippUserActions = () => {
       confirmText:
         'Are you sure you want to change the source of authority for [userPrincipalName]? Setting it to On-Premises Managed will take until the next sync cycle to show the change.',
       multiPost: false,
+      // Only meaningful for users that are on-premises managed (convert to cloud) or
+      // were synced at some point (revert to on-premises); hide for cloud-native users
+      condition: (row) =>
+        row?.onPremisesSyncEnabled === true ||
+        !!(
+          row?.onPremisesImmutableId ||
+          row?.OnPremisesImmutableId ||
+          row?.onPremisesLastSyncDateTime ||
+          row?.onPremisesDistinguishedName
+        ),
     },
     {
       label: 'Reprocess License Assignments',
