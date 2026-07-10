@@ -38,6 +38,9 @@ const LOCK_STATE_OPTIONS = [
 // prefills the form so submitting without changes is a no-op write of current values.
 export const CippEditSitePropertiesForm = ({ formHook, row, tenantFilter }) => {
   const siteRow = Array.isArray(row) ? row[0] : row
+  // Group-connected sites only accept sharing level, link defaults, lock state and storage
+  // quota; SPO rejects Title, domain restrictions, anonymous-link override and version policy.
+  const isGroupSite = siteRow?.rootWebTemplate === 'Group'
   const propsApi = ApiGetCall({
     url: '/api/ListSiteProperties',
     data: {
@@ -99,10 +102,24 @@ export const CippEditSitePropertiesForm = ({ formHook, row, tenantFilter }) => {
 
   return (
     <Stack spacing={1.5}>
-      <Typography variant="subtitle2">General</Typography>
-      <CippFormComponent type="textField" name="Title" label="Site Name" formControl={formHook} />
-
-      <Divider />
+      {isGroupSite && (
+        <Alert severity="info">
+          Group-connected (Team) site: only the sharing level, default link settings, lock state
+          and storage limits can be managed here. Rename the site by renaming its M365 group.
+        </Alert>
+      )}
+      {!isGroupSite && (
+        <>
+          <Typography variant="subtitle2">General</Typography>
+          <CippFormComponent
+            type="textField"
+            name="Title"
+            label="Site Name"
+            formControl={formHook}
+          />
+          <Divider />
+        </>
+      )}
       <Typography variant="subtitle2">External Sharing</Typography>
       <CippFormComponent
         type="autoComplete"
@@ -131,15 +148,17 @@ export const CippEditSitePropertiesForm = ({ formHook, row, tenantFilter }) => {
         options={LINK_PERMISSION_OPTIONS}
         formControl={formHook}
       />
-      <CippFormComponent
-        type="autoComplete"
-        name="SharingDomainRestrictionMode"
-        label="Domain Restriction"
-        multiple={false}
-        creatable={false}
-        options={DOMAIN_MODE_OPTIONS}
-        formControl={formHook}
-      />
+      {!isGroupSite && (
+        <CippFormComponent
+          type="autoComplete"
+          name="SharingDomainRestrictionMode"
+          label="Domain Restriction"
+          multiple={false}
+          creatable={false}
+          options={DOMAIN_MODE_OPTIONS}
+          formControl={formHook}
+        />
+      )}
       <CippFormCondition
         field="SharingDomainRestrictionMode"
         compareType="valueEq"
@@ -166,12 +185,14 @@ export const CippEditSitePropertiesForm = ({ formHook, row, tenantFilter }) => {
           formControl={formHook}
         />
       </CippFormCondition>
-      <CippFormComponent
-        type="switch"
-        name="OverrideTenantAnonymousLinkExpirationPolicy"
-        label="Override tenant anonymous link expiration"
-        formControl={formHook}
-      />
+      {!isGroupSite && (
+        <CippFormComponent
+          type="switch"
+          name="OverrideTenantAnonymousLinkExpirationPolicy"
+          label="Override tenant anonymous link expiration"
+          formControl={formHook}
+        />
+      )}
       <CippFormCondition
         field="OverrideTenantAnonymousLinkExpirationPolicy"
         compareType="is"
@@ -214,18 +235,22 @@ export const CippEditSitePropertiesForm = ({ formHook, row, tenantFilter }) => {
         formControl={formHook}
       />
 
-      <Divider />
-      <Typography variant="subtitle2">File Version Policy</Typography>
-      <CippFormComponent
-        type="switch"
-        name="InheritVersionPolicyFromTenant"
-        label="Inherit version policy from tenant"
-        formControl={formHook}
-      />
+      {!isGroupSite && (
+        <>
+          <Divider />
+          <Typography variant="subtitle2">File Version Policy</Typography>
+          <CippFormComponent
+            type="switch"
+            name="InheritVersionPolicyFromTenant"
+            label="Inherit version policy from tenant"
+            formControl={formHook}
+          />
+        </>
+      )}
       <CippFormCondition
         field="InheritVersionPolicyFromTenant"
         compareType="is"
-        compareValue={false}
+        compareValue={isGroupSite ? '__never__' : false}
         formControl={formHook}
       >
         <CippFormComponent
