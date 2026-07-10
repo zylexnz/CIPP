@@ -945,6 +945,17 @@ export const useCippUserActions = () => {
         displayName: 'displayName',
         type: '!User',
       },
+      // Pre-select the current source of authority (onPremisesSyncEnabled: true means
+      // on-premises managed; null/false means cloud managed); leave unselected when
+      // the selected rows have mixed states
+      defaultvalues: (row) => {
+        const states = [
+          ...new Set(
+            (Array.isArray(row) ? row : [row]).map((r) => r?.onPremisesSyncEnabled === true)
+          ),
+        ]
+        return states.length === 1 ? { isCloudManaged: String(!states[0]) } : {}
+      },
       fields: [
         {
           type: 'radio',
@@ -954,7 +965,20 @@ export const useCippUserActions = () => {
             { label: 'Cloud Managed', value: true },
             { label: 'On-Premises Managed', value: false },
           ],
-          validators: { required: 'Please select a source of authority' },
+          validators: {
+            required: 'Please select a source of authority',
+            validate: (value, formValues, row) => {
+              const states = [
+                ...new Set(
+                  (Array.isArray(row) ? row : [row]).map((r) => r?.onPremisesSyncEnabled === true)
+                ),
+              ]
+              if (states.length === 1 && String(value) === String(!states[0])) {
+                return 'Source of authority is unchanged'
+              }
+              return true
+            },
+          },
         },
       ],
       confirmText:
