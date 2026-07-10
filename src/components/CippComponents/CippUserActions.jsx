@@ -17,6 +17,7 @@ import {
   PersonOff,
   PhonelinkLock,
   PhonelinkSetup,
+  Refresh,
   Shortcut,
   EditAttributes,
   CloudSync,
@@ -25,10 +26,11 @@ import {
 import { getCippLicenseTranslation } from '../../utils/get-cipp-license-translation'
 import { useSettings } from '../../hooks/use-settings.js'
 import { usePermissions } from '../../hooks/use-permissions'
-import { Tooltip, Box, Divider, Typography } from '@mui/material'
+import { Tooltip, Box, Divider, Typography, Alert, Skeleton, Link, IconButton } from '@mui/material'
 import CippFormComponent from './CippFormComponent'
 import { CippFormCondition } from './CippFormCondition'
 import { useWatch } from 'react-hook-form'
+import { ApiGetCall } from '../../api/ApiCall'
 
 // Separate component for Manage Licenses form to avoid hook issues
 const ManageLicensesForm = ({ formControl, tenant }) => {
@@ -180,6 +182,129 @@ const ManageLicensesForm = ({ formControl, tenant }) => {
           }}
         />
       )}
+    </>
+  )
+}
+
+// Separate component for the Temporary Access Pass form so it can query the tenant's
+// TAP policy to validate the allowed lifetime range and enforce one-time use when forced
+const TemporaryAccessPassForm = ({ formControl, row }) => {
+  const tenantFilter = useSettings().currentTenant
+  const rowData = Array.isArray(row) ? row[0] : row
+  const tenant = tenantFilter === 'AllTenants' && rowData?.Tenant ? rowData.Tenant : tenantFilter
+
+  const tapPolicy = ApiGetCall({
+    url: '/api/ListGraphRequest',
+    data: {
+      Endpoint:
+        'policies/authenticationMethodsPolicy/authenticationMethodConfigurations/TemporaryAccessPass',
+      tenantFilter: tenant,
+    },
+    queryKey: `TAPPolicy-${tenant}`,
+  })
+
+  const policy = tapPolicy.data?.Results?.[0]
+  const oneTimeUseForced = policy?.isUsableOnce === true
+
+  useEffect(() => {
+    if (!policy) return
+    // Deferred a tick: CippApiDialog resets the form in a mount effect that runs after
+    // this child effect, so an immediate setValue would be wiped when the query is cached
+    const timer = setTimeout(() => {
+      formControl.setValue('isUsableOnce', oneTimeUseForced)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [tapPolicy.dataUpdatedAt])
+
+  if (tapPolicy.isLoading) {
+    return (
+      <>
+        <Skeleton variant="rounded" height={40} />
+        <Skeleton variant="rounded" height={40} />
+        <Skeleton variant="rounded" height={40} />
+      </>
+    )
+  }
+
+  return (
+    <>
+      {tapPolicy.isSuccess && policy?.state !== 'enabled' && (
+        <Alert
+          severity="error"
+          action={
+            <Tooltip title="Re-check the TAP policy state">
+              <span>
+                <IconButton
+                  size="small"
+                  color="inherit"
+                  onClick={() => tapPolicy.refetch()}
+                  disabled={tapPolicy.isFetching}
+                >
+                  <Refresh fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          }
+        >
+          Temporary Access Pass is not enabled in this tenant's authentication method policy and
+          creating a TAP will fail. Enable it on the{' '}
+          <Link href="/tenant/administration/authentication-methods" target="_blank">
+            Authentication Methods
+          </Link>{' '}
+          page first, then re-check.
+        </Alert>
+      )}
+      <CippFormComponent
+        type="number"
+        name="lifetimeInMinutes"
+        label="Lifetime (Minutes)"
+        formControl={formControl}
+        placeholder="Leave blank for default"
+        helperText={
+          policy
+            ? `Tenant policy allows ${policy.minimumLifetimeInMinutes ?? 10} to ${
+                policy.maximumLifetimeInMinutes ?? 480
+              } minutes (default ${policy.defaultLifetimeInMinutes ?? 60})`
+            : undefined
+        }
+        validators={
+          policy
+            ? {
+                min: {
+                  value: policy.minimumLifetimeInMinutes ?? 10,
+                  message: `Minimum lifetime is ${policy.minimumLifetimeInMinutes ?? 10} minutes`,
+                },
+                max: {
+                  value: policy.maximumLifetimeInMinutes ?? 480,
+                  message: `Maximum lifetime is ${policy.maximumLifetimeInMinutes ?? 480} minutes`,
+                },
+              }
+            : undefined
+        }
+      />
+      <Tooltip
+        title={oneTimeUseForced ? 'One-time use is enforced by the tenant TAP policy' : ''}
+        placement="bottom"
+      >
+        <Box>
+          <CippFormComponent
+            type="switch"
+            name="isUsableOnce"
+            label={
+              oneTimeUseForced ? 'One-time use only (enforced by policy)' : 'One-time use only'
+            }
+            formControl={formControl}
+            disabled={oneTimeUseForced}
+          />
+        </Box>
+      </Tooltip>
+      <CippFormComponent
+        type="datePicker"
+        name="startDateTime"
+        label="Start Date/Time (leave blank for immediate)"
+        dateTimeType="datetime"
+        formControl={formControl}
+      />
     </>
   )
 }
@@ -429,25 +554,7 @@ export const useCippUserActions = () => {
       icon: <Password />,
       url: '/api/ExecCreateTAP',
       data: { ID: 'userPrincipalName' },
-      fields: [
-        {
-          type: 'number',
-          name: 'lifetimeInMinutes',
-          label: 'Lifetime (Minutes)',
-          placeholder: 'Leave blank for default',
-        },
-        {
-          type: 'switch',
-          name: 'isUsableOnce',
-          label: 'One-time use only',
-        },
-        {
-          type: 'datePicker',
-          name: 'startDateTime',
-          label: 'Start Date/Time (leave blank for immediate)',
-          dateTimeType: 'datetime',
-        },
-      ],
+      children: ({ formHook, row }) => <TemporaryAccessPassForm formControl={formHook} row={row} />,
       confirmText:
         'Are you sure you want to create a Temporary Access Pass for [userPrincipalName]?',
       multiPost: false,
