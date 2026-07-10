@@ -69,7 +69,7 @@ const VersionCleanupStatusBody = ({ statusApi }) => {
   }
 
   const propertyItems = VERSION_CLEANUP_FIELDS.filter(
-    (key) => progress?.[key] !== undefined && progress?.[key] !== '',
+    (key) => progress?.[key] !== undefined && progress?.[key] !== ''
   ).map((key) => ({
     label: VERSION_CLEANUP_LABELS[key],
     value: String(progress[key]),
@@ -104,12 +104,7 @@ const VersionCleanupStatusModal = ({ row, tenantFilter, drawerVisible, setDrawer
   })
 
   return (
-    <Dialog
-      fullWidth
-      maxWidth="sm"
-      open={!!drawerVisible}
-      onClose={() => setDrawerVisible(false)}
-    >
+    <Dialog fullWidth maxWidth="sm" open={!!drawerVisible} onClose={() => setDrawerVisible(false)}>
       <DialogTitle>
         Cleanup Job Status{siteRow?.displayName ? ` — ${siteRow.displayName}` : ''}
       </DialogTitle>
@@ -151,7 +146,7 @@ const Page = () => {
         URL: 'webUrl',
         SharePointType: 'rootWebTemplate',
       },
-      confirmText: 'Select the User to add as a member.',
+      confirmText: 'Select the User to add and the site role to add them to.',
       fields: [
         {
           type: 'autoComplete',
@@ -177,7 +172,21 @@ const Page = () => {
             showRefresh: true,
           },
         },
+        {
+          type: 'radio',
+          name: 'Role',
+          label: 'Site Role',
+          options: [
+            { label: 'Members', value: 'Members' },
+            { label: 'Owners', value: 'Owners' },
+            { label: 'Visitors', value: 'Visitors' },
+          ],
+        },
       ],
+      defaultvalues: {
+        Role: 'Members',
+      },
+      allowResubmit: true,
       multiPost: false,
     },
     {
@@ -191,33 +200,50 @@ const Page = () => {
         URL: 'webUrl',
         SharePointType: 'rootWebTemplate',
       },
-      confirmText: 'Select the User to remove as a member.',
-      fields: [
-        {
-          type: 'autoComplete',
-          name: 'user',
-          label: 'Select User',
-          multiple: false,
-          creatable: false,
-          api: {
-            url: '/api/ListGraphRequest',
-            data: {
-              Endpoint: 'users',
-              $select: 'id,displayName,userPrincipalName',
-              $top: 999,
-              $count: true,
-            },
-            queryKey: 'ListUsersAutoComplete',
-            dataKey: 'Results',
-            labelField: (user) => `${user.displayName} (${user.userPrincipalName})`,
-            valueField: 'userPrincipalName',
-            addedField: {
-              id: 'id',
-            },
-            showRefresh: true,
-          },
-        },
-      ],
+      confirmText: 'Select the user to remove from their site role.',
+      children: ({ formHook, row }) => {
+        const siteRow = Array.isArray(row) ? row[0] : row
+        return (
+          <CippFormComponent
+            type="autoComplete"
+            name="user"
+            label="Select Member"
+            multiple={false}
+            creatable={false}
+            formControl={formHook}
+            validators={{ required: 'Please select a member' }}
+            api={{
+              url: '/api/ListSiteMembers',
+              data: {
+                SiteId: siteRow?.siteId,
+                SiteUrl: siteRow?.webUrl,
+                tenantFilter: siteRow?.Tenant ?? tenantFilter,
+              },
+              queryKey: `SiteMembersPicker-${siteRow?.siteId}`,
+              dataKey: 'Results',
+              labelField: (member) =>
+                `${member.Title} (${member.UserPrincipalName}) — ${member.Group}`,
+              valueField: 'UserPrincipalName',
+              addedField: {
+                Group: 'Group',
+                Type: 'Type',
+              },
+              dataFilter: (options) =>
+                options.filter(
+                  (option, index, all) =>
+                    option.value &&
+                    ['Owners', 'Members', 'Visitors'].includes(option.addedFields?.Group) &&
+                    all.findIndex(
+                      (o) =>
+                        o.value === option.value &&
+                        o.addedFields?.Group === option.addedFields?.Group
+                    ) === index
+                ),
+              showRefresh: true,
+            }}
+          />
+        )
+      },
       multiPost: false,
     },
     {
@@ -544,11 +570,12 @@ const Page = () => {
           url: '/api/ListSiteMembers',
           data: {
             SiteId: row.siteId,
+            SiteUrl: row.webUrl,
             tenantFilter: tenantFilter,
           },
           dataKey: 'Results',
         }}
-        simpleColumns={['fields.Title', 'fields.EMail', 'fields.IsSiteAdmin']}
+        simpleColumns={['Title', 'Email', 'Group', 'Type', 'IsSiteAdmin']}
       />
     ),
     size: 'lg', // Make the offcanvas extra large
