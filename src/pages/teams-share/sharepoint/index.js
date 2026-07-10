@@ -245,6 +245,7 @@ const Page = () => {
         )
       },
       multiPost: false,
+      allowResubmit: true,
     },
     {
       label: 'Add Site Admin',
