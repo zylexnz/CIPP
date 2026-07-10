@@ -1,9 +1,7 @@
-import { Layout as DashboardLayout } from '../../../layouts/index.js'
-import { usePermissions } from '../../../hooks/use-permissions'
-import { CippTablePage } from '../../../components/CippComponents/CippTablePage.jsx'
-import { Button } from '@mui/material'
-import { ArrowBack, RestoreFromTrash } from '@mui/icons-material'
-import Link from 'next/link'
+import { Layout as DashboardLayout } from '../../layouts/index.js'
+import { usePermissions } from '../../hooks/use-permissions'
+import { CippTablePage } from '../../components/CippComponents/CippTablePage.jsx'
+import { RestoreFromTrash } from '@mui/icons-material'
 
 const Page = () => {
   const { checkPermissions } = usePermissions()
@@ -30,7 +28,6 @@ const Page = () => {
       title="Deleted SharePoint Sites"
       apiUrl="/api/ListDeletedSites"
       apiDataKey="Results"
-      queryKey="ListDeletedSites"
       actions={actions}
       simpleColumns={[
         'Name',
@@ -40,11 +37,6 @@ const Page = () => {
         'DaysRemaining',
         'StorageMaximumLevel',
       ]}
-      cardButton={
-        <Button component={Link} href="/teams-share/sharepoint" startIcon={<ArrowBack />}>
-          Back to Sites
-        </Button>
-      }
     />
   )
 }
