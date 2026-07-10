@@ -188,7 +188,7 @@ const Page = () => {
       data: {
         groupId: 'ownerPrincipalName',
         add: false,
-        URL: 'URL',
+        URL: 'webUrl',
         SharePointType: 'rootWebTemplate',
       },
       confirmText: 'Select the User to remove as a member.',
