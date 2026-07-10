@@ -840,6 +840,15 @@ export const useCippUserActions = () => {
       icon: <LockPerson />,
       url: '/api/ExecDisableUser',
       data: { ID: 'id' },
+      // Pre-select the current sign-in state; leave unselected when the
+      // selected rows have mixed states. String values match what a radio
+      // click produces (e.target.value is always a string).
+      defaultvalues: (row) => {
+        const states = [...new Set((Array.isArray(row) ? row : [row]).map((r) => r?.accountEnabled))]
+        return states.length === 1 && typeof states[0] === 'boolean'
+          ? { Enable: String(states[0]) }
+          : {}
+      },
       fields: [
         {
           type: 'radio',
@@ -849,7 +858,22 @@ export const useCippUserActions = () => {
             { label: 'Enabled', value: true },
             { label: 'Disabled', value: false },
           ],
-          validators: { required: 'Please select a sign-in state' },
+          validators: {
+            required: 'Please select a sign-in state',
+            validate: (value, formValues, row) => {
+              const states = [
+                ...new Set((Array.isArray(row) ? row : [row]).map((r) => r?.accountEnabled)),
+              ]
+              if (
+                states.length === 1 &&
+                typeof states[0] === 'boolean' &&
+                String(value) === String(states[0])
+              ) {
+                return 'Sign-in state is unchanged'
+              }
+              return true
+            },
+          },
         },
       ],
       confirmText: 'Are you sure you want to set the sign-in state for [userPrincipalName]?',
