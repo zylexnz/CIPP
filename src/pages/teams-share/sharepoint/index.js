@@ -795,13 +795,6 @@ const Page = () => {
       >
         Bulk Add Sites
       </Button>
-      <Button
-        component={Link}
-        href="/teams-share/sharepoint/deleted-sites"
-        startIcon={<RestoreFromTrash />}
-      >
-        Deleted Sites
-      </Button>
       {reportDB.controls}
     </Stack>
   )
