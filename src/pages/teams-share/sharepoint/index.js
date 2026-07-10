@@ -12,6 +12,7 @@ import {
   CleaningServices,
   Assessment,
   FolderShared,
+  Settings,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { Stack } from '@mui/system'
@@ -22,6 +23,7 @@ import CippFormComponent from '../../../components/CippComponents/CippFormCompon
 import { CippFormCondition } from '../../../components/CippComponents/CippFormCondition'
 import { CippPropertyList } from '../../../components/CippComponents/CippPropertyList'
 import { ApiGetCall } from '../../../api/ApiCall'
+import { CippEditSitePropertiesForm } from '../../../components/CippComponents/CippEditSitePropertiesForm'
 
 // Friendly labels for the SharePoint version cleanup (trim) job progress fields.
 const VERSION_CLEANUP_LABELS = {
@@ -243,6 +245,60 @@ const Page = () => {
             }}
           />
         )
+      },
+      multiPost: false,
+      allowResubmit: true,
+    },
+    {
+      label: 'Edit Site',
+      type: 'POST',
+      icon: <Settings />,
+      url: '/api/ExecSetSiteProperties',
+      confirmText:
+        'Edit site properties for [displayName]. Fields are prefilled with the current values.',
+      children: ({ formHook, row }) => (
+        <CippEditSitePropertiesForm formHook={formHook} row={row} tenantFilter={tenantFilter} />
+      ),
+      customDataformatter: (row, action, formData) => {
+        const siteRow = Array.isArray(row) ? row[0] : row
+        const v = (x) => (x && typeof x === 'object' && 'value' in x ? x.value : x)
+        const payload = {
+          tenantFilter: siteRow.Tenant ?? tenantFilter,
+          SiteUrl: siteRow.webUrl,
+          Title: formData.Title,
+          SharingCapability: v(formData.SharingCapability),
+          DefaultSharingLinkType: v(formData.DefaultSharingLinkType),
+          DefaultLinkPermission: v(formData.DefaultLinkPermission),
+          SharingDomainRestrictionMode: v(formData.SharingDomainRestrictionMode),
+          OverrideTenantAnonymousLinkExpirationPolicy:
+            !!formData.OverrideTenantAnonymousLinkExpirationPolicy,
+          LockState: v(formData.LockState),
+          InheritVersionPolicyFromTenant: !!formData.InheritVersionPolicyFromTenant,
+        }
+        if (v(formData.SharingDomainRestrictionMode) === 'AllowList') {
+          payload.SharingAllowedDomainList = formData.SharingAllowedDomainList
+        }
+        if (v(formData.SharingDomainRestrictionMode) === 'BlockList') {
+          payload.SharingBlockedDomainList = formData.SharingBlockedDomainList
+        }
+        if (formData.OverrideTenantAnonymousLinkExpirationPolicy) {
+          payload.AnonymousLinkExpirationInDays = parseInt(
+            formData.AnonymousLinkExpirationInDays ?? 0,
+            10
+          )
+        }
+        const storageMax = parseInt(formData.StorageMaximumLevel, 10)
+        const storageWarn = parseInt(formData.StorageWarningLevel, 10)
+        if (!isNaN(storageMax) && storageMax > 0) payload.StorageMaximumLevel = storageMax
+        if (!isNaN(storageWarn) && storageWarn > 0) payload.StorageWarningLevel = storageWarn
+        if (!formData.InheritVersionPolicyFromTenant) {
+          payload.EnableAutoExpirationVersionTrim = !!formData.EnableAutoExpirationVersionTrim
+          if (!formData.EnableAutoExpirationVersionTrim) {
+            payload.MajorVersionLimit = parseInt(formData.MajorVersionLimit ?? 0, 10)
+            payload.ExpireVersionsAfterDays = parseInt(formData.ExpireVersionsAfterDays ?? 0, 10)
+          }
+        }
+        return payload
       },
       multiPost: false,
       allowResubmit: true,
