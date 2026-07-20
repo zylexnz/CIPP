@@ -45,7 +45,7 @@ export const CippContainerManagement = () => {
 
   const updateSettingsForm = useForm({
     mode: "onChange",
-    defaultValues: { CheckInterval: null, AutoUpdate: false, CheckTime: null },
+    defaultValues: { CheckInterval: null, AutoUpdate: true, CheckTime: null },
   });
 
   const containerStatus = ApiGetCall({
@@ -277,7 +277,8 @@ export const CippContainerManagement = () => {
           <Stack spacing={2}>
             <Typography variant="body2" color="text.secondary">
               Configure automatic update checking. CIPP will query the container registry for a new
-              image digest and optionally restart the container to apply the update.
+              image digest and optionally restart the container to apply the update. By default,
+              CIPP checks every hour and auto-restarts at the preferred time of 23:00.
               NOTE: If the container restarts for any reason the latest image version for your update channel will be pulled regardless
             </Typography>
 
